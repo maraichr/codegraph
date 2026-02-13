@@ -1,0 +1,49 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+*.out
+vendor/
+coverage.out
+coverage.html
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docker volumes
+.docker-data/
+
+# Generated
+internal/api/graphql/generated.go
+internal/store/postgres/db.go
+internal/store/postgres/models.go
+internal/store/postgres/queries/*.sql.go
+
+# Secrets
+*.pem
+*.key
+credentials.json

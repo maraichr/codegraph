@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg17
+    container_name: codegraph-postgres
+    environment:
+      POSTGRES_USER: codegraph
+      POSTGRES_PASSWORD: codegraph
+      POSTGRES_DB: codegraph
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codegraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:2026.01-community
+    container_name: codegraph-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/codegraph
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4jdata:/data
+      - ./migrations/neo4j:/var/lib/neo4j/import
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  valkey:
+    image: valkey/valkey:8.1-alpine
+    container_name: codegraph-valkey
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: codegraph-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: codegraph
+      MINIO_ROOT_PASSWORD: codegraph123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  neo4jdata:
+  valkeydata:
+  miniodata:

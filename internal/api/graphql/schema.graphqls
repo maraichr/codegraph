@@ -1,0 +1,269 @@
+scalar DateTime
+
+type Query {
+  projects(limit: Int = 20, offset: Int = 0): ProjectConnection!
+  project(slug: String!): Project
+  symbol(id: ID!): Symbol
+  searchSymbols(
+    projectSlug: String!
+    query: String!
+    kinds: [SymbolKind!]
+    languages: [String!]
+    limit: Int = 20
+  ): [Symbol!]!
+  lineageGraph(
+    symbolId: ID!
+    depth: Int = 3
+    direction: LineageDirection = BOTH
+  ): LineageGraph!
+  semanticSearch(
+    projectSlug: String!
+    query: String!
+    kinds: [SymbolKind!]
+    topK: Int = 20
+  ): [SemanticSearchResult!]!
+  columnLineage(
+    columnId: ID!
+    depth: Int = 5
+    direction: LineageDirection = BOTH
+  ): ColumnLineageGraph!
+  impactAnalysis(
+    symbolId: ID!
+    changeType: ChangeType = MODIFY
+    maxDepth: Int = 5
+  ): ImpactAnalysisResult!
+}
+
+type SemanticSearchResult {
+  symbol: Symbol!
+  score: Float!
+}
+
+type Mutation {
+  createProject(input: CreateProjectInput!): Project!
+  updateProject(slug: String!, input: UpdateProjectInput!): Project!
+  deleteProject(slug: String!): Boolean!
+  createSource(projectSlug: String!, input: CreateSourceInput!): Source!
+  deleteSource(id: ID!): Boolean!
+  triggerIndexRun(projectSlug: String!, sourceId: ID): IndexRun!
+}
+
+type ProjectConnection {
+  nodes: [Project!]!
+  totalCount: Int!
+}
+
+type Project {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  sources: [Source!]!
+  indexRuns(limit: Int = 10): [IndexRun!]!
+  symbolCount: Int!
+  edgeCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Source {
+  id: ID!
+  name: String!
+  sourceType: SourceType!
+  lastSyncedAt: DateTime
+  createdAt: DateTime!
+}
+
+type IndexRun {
+  id: ID!
+  status: IndexRunStatus!
+  filesProcessed: Int!
+  symbolsFound: Int!
+  edgesFound: Int!
+  startedAt: DateTime
+  completedAt: DateTime
+  errorMessage: String
+  createdAt: DateTime!
+}
+
+type Symbol {
+  id: ID!
+  name: String!
+  qualifiedName: String!
+  kind: SymbolKind!
+  language: String!
+  file: File!
+  startLine: Int!
+  endLine: Int!
+  signature: String
+  docComment: String
+  incomingEdges(types: [EdgeType!]): [SymbolEdge!]!
+  outgoingEdges(types: [EdgeType!]): [SymbolEdge!]!
+}
+
+type File {
+  id: ID!
+  path: String!
+  language: String!
+  sizeBytes: Int!
+}
+
+type SymbolEdge {
+  id: ID!
+  source: Symbol!
+  target: Symbol!
+  edgeType: EdgeType!
+}
+
+type LineageGraph {
+  nodes: [Symbol!]!
+  edges: [SymbolEdge!]!
+  rootSymbolId: ID!
+}
+
+# Inputs
+input CreateProjectInput {
+  name: String!
+  slug: String!
+  description: String
+}
+
+input UpdateProjectInput {
+  name: String
+  description: String
+}
+
+input CreateSourceInput {
+  name: String!
+  sourceType: SourceType!
+  connectionUri: String
+  config: String
+}
+
+# Enums
+enum SymbolKind {
+  FUNCTION
+  METHOD
+  CLASS
+  INTERFACE
+  VARIABLE
+  CONSTANT
+  PACKAGE
+  MODULE
+  TABLE
+  COLUMN
+  VIEW
+  PROCEDURE
+  TRIGGER
+  TYPE
+  ENUM
+  FIELD
+  PROPERTY
+}
+
+enum EdgeType {
+  CALLS
+  IMPORTS
+  INHERITS
+  IMPLEMENTS
+  REFERENCES
+  CONTAINS
+  DEPENDS_ON
+  READS_FROM
+  WRITES_TO
+  USES_TABLE
+  USES_COLUMN
+  JOINS
+  TRANSFORMS_TO
+}
+
+enum SourceType {
+  GIT
+  DATABASE
+  FILESYSTEM
+  UPLOAD
+  S3
+}
+
+enum IndexRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum LineageDirection {
+  UPSTREAM
+  DOWNSTREAM
+  BOTH
+}
+
+enum ChangeType {
+  MODIFY
+  DELETE
+  RENAME
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DerivationType {
+  DIRECT_COPY
+  TRANSFORM
+  AGGREGATE
+  FILTER
+  JOIN
+  CONDITIONAL
+}
+
+# Column lineage types
+type ColumnLineageGraph {
+  nodes: [ColumnLineageNode!]!
+  edges: [ColumnLineageEdge!]!
+  rootColumnId: ID!
+}
+
+type ColumnLineageNode {
+  id: ID!
+  name: String!
+  qualifiedName: String!
+  tableName: String!
+  kind: String!
+}
+
+type ColumnLineageEdge {
+  sourceId: ID!
+  targetId: ID!
+  derivationType: String!
+  expression: String
+}
+
+# Impact analysis types
+type ImpactAnalysisResult {
+  root: ImpactSymbol!
+  changeType: ChangeType!
+  directImpact: [ImpactNode!]!
+  transitiveImpact: [ImpactNode!]!
+  totalAffected: Int!
+}
+
+type ImpactSymbol {
+  id: ID!
+  name: String!
+  qualifiedName: String!
+  kind: String!
+  language: String!
+}
+
+type ImpactNode {
+  symbol: ImpactSymbol!
+  depth: Int!
+  severity: Severity!
+  edgeType: String!
+  path: [ID!]!
+}

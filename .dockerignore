@@ -1,0 +1,8 @@
+bin/
+.git/
+.env*
+frontend/node_modules/
+frontend/dist/
+*.md
+coverage.*
+.docker-data/
