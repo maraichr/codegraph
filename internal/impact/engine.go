@@ -75,16 +75,20 @@ func (e *Engine) Analyze(ctx context.Context, symbolID uuid.UUID, changeType str
 		Language:      sym.Language,
 	}
 
-	// Query downstream lineage from Neo4j
-	lineageResult, err := e.graph.Lineage(ctx, symbolID, "downstream", maxDepth)
+	// Query upstream lineage from Neo4j — find everything that depends on this symbol.
+	// Edge direction: (A)-[:DEPENDS_ON]->(B) means A depends on B.
+	// Upstream from B returns all paths like (A)-[:DEPENDS_ON*]->(B).
+	lineageResult, err := e.graph.Lineage(ctx, symbolID, "upstream", maxDepth)
 	if err != nil {
 		return nil, fmt.Errorf("lineage query: %w", err)
 	}
 
-	// Build adjacency list for depth computation
-	adjacency := make(map[string][]graph.LineageEdge)
+	// Build reverse adjacency: for upstream edges (A→B), we need to traverse
+	// from B outward to A (from the changed symbol to its dependents).
+	// Key on TargetID, traverse to SourceID.
+	reverseAdj := make(map[string][]graph.LineageEdge)
 	for _, edge := range lineageResult.Edges {
-		adjacency[edge.SourceID] = append(adjacency[edge.SourceID], edge)
+		reverseAdj[edge.TargetID] = append(reverseAdj[edge.TargetID], edge)
 	}
 
 	// Build node map for lookup
@@ -93,7 +97,7 @@ func (e *Engine) Analyze(ctx context.Context, symbolID uuid.UUID, changeType str
 		nodeMap[n.ID] = n
 	}
 
-	// BFS to compute depth and paths from root
+	// BFS from root symbol outward through reverse edges to find impacted nodes
 	type bfsEntry struct {
 		id    string
 		depth int
@@ -111,16 +115,17 @@ func (e *Engine) Analyze(ctx context.Context, symbolID uuid.UUID, changeType str
 		current := queue[0]
 		queue = queue[1:]
 
-		for _, edge := range adjacency[current.id] {
-			if visited[edge.TargetID] {
+		for _, edge := range reverseAdj[current.id] {
+			dependentID := edge.SourceID // the node that depends on current
+			if visited[dependentID] {
 				continue
 			}
-			visited[edge.TargetID] = true
+			visited[dependentID] = true
 
 			depth := current.depth + 1
-			path := append(append([]string{}, current.path...), edge.TargetID)
+			path := append(append([]string{}, current.path...), dependentID)
 
-			node, exists := nodeMap[edge.TargetID]
+			node, exists := nodeMap[dependentID]
 			if !exists {
 				continue
 			}
@@ -147,7 +152,7 @@ func (e *Engine) Analyze(ctx context.Context, symbolID uuid.UUID, changeType str
 			}
 
 			if depth < maxDepth {
-				queue = append(queue, bfsEntry{id: edge.TargetID, depth: depth, path: path, edge: edge.EdgeType})
+				queue = append(queue, bfsEntry{id: dependentID, depth: depth, path: path, edge: edge.EdgeType})
 			}
 		}
 	}

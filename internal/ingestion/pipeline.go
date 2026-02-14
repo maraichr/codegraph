@@ -2,6 +2,7 @@ package ingestion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -40,6 +41,16 @@ func (p *Pipeline) Run(ctx context.Context, msg IngestMessage) error {
 		SourceID:   msg.SourceID,
 		SourceType: msg.SourceType,
 		Trigger:    msg.Trigger,
+	}
+
+	// Load project settings for optional lineage_exclude_paths
+	if proj, err := p.store.GetProjectByID(ctx, msg.ProjectID); err == nil && len(proj.Settings) > 0 {
+		var settings struct {
+			LineageExcludePaths []string `json:"lineage_exclude_paths"`
+		}
+		if json.Unmarshal(proj.Settings, &settings) == nil && len(settings.LineageExcludePaths) > 0 {
+			rc.LineageExcludePaths = settings.LineageExcludePaths
+		}
 	}
 
 	for _, stage := range p.stages {

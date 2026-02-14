@@ -40,7 +40,13 @@ func (h *SymbolHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 
 	kinds := parseCSV(r.URL.Query().Get("kind"))
+	if kinds == nil {
+		kinds = []string{}
+	}
 	languages := parseCSV(r.URL.Query().Get("language"))
+	if languages == nil {
+		languages = []string{}
+	}
 	limit := intQuery(r, "limit", 20, 100)
 
 	rows, err := h.store.SearchSymbols(r.Context(), postgres.SearchSymbolsParams{

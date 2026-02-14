@@ -15,12 +15,12 @@ type Resolver struct {
 	Logger  *slog.Logger
 	Store   *store.Store
 	Graph   *graph.Client
-	Embed   *embedding.Client
+	Embed   embedding.Embedder
 	Lineage *lineage.Engine
 	Impact  *impact.Engine
 }
 
 // NewResolver creates a new root resolver.
-func NewResolver(logger *slog.Logger, s *store.Store, g *graph.Client, embed *embedding.Client, lin *lineage.Engine, imp *impact.Engine) *Resolver {
+func NewResolver(logger *slog.Logger, s *store.Store, g *graph.Client, embed embedding.Embedder, lin *lineage.Engine, imp *impact.Engine) *Resolver {
 	return &Resolver{Logger: logger, Store: s, Graph: g, Embed: embed, Lineage: lin, Impact: imp}
 }

@@ -27,7 +27,7 @@ type RouterDeps struct {
 	MinIO   *minioclient.Client
 	Producer *ingestion.Producer
 	Graph   *graph.Client
-	Embed   *embedding.Client
+	Embed   embedding.Embedder
 	Lineage *lineage.Engine
 	Impact  *impact.Engine
 }
@@ -72,7 +72,7 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 					})
 				})
 
-				indexRuns := apihandler.NewIndexRunHandler(logger, s)
+				indexRuns := apihandler.NewIndexRunHandler(logger, s, deps.Producer)
 				r.Route("/index-runs", func(r chi.Router) {
 					r.Get("/", indexRuns.List)
 					r.Post("/", indexRuns.Trigger)

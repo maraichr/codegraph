@@ -8,12 +8,13 @@ import (
 
 // Parser implements a recursive-descent T-SQL parser that extracts symbols and references.
 type Parser struct {
-	tokens  []Token
-	pos     int
-	symbols []parser.Symbol
-	refs    []parser.RawReference
-	colRefs []parser.ColumnReference
-	schema  string // current default schema
+	tokens           []Token
+	pos              int
+	symbols          []parser.Symbol
+	refs             []parser.RawReference
+	colRefs          []parser.ColumnReference
+	schema           string // current default schema
+	skipColumnLineage bool  // when true, do not extract column-level lineage (migration/schema files)
 }
 
 // TSQLParser implements the parser.Parser interface.
@@ -28,7 +29,9 @@ func (t *TSQLParser) Languages() []string {
 }
 
 func (t *TSQLParser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
-	lexer := NewLexer(string(input.Content))
+	// Strip common template tokens (e.g. DNN Platform's {databaseOwner}, {objectQualifier})
+	content := stripTemplateTokens(string(input.Content))
+	lexer := NewLexer(content)
 	tokens := lexer.Tokenize()
 
 	// Split into batches by GO
@@ -39,7 +42,11 @@ func (t *TSQLParser) Parse(input parser.FileInput) (*parser.ParseResult, error) 
 	var allColRefs []parser.ColumnReference
 
 	for _, batch := range batches {
-		p := &Parser{tokens: batch, schema: "dbo"}
+		p := &Parser{
+			tokens:            batch,
+			schema:            "dbo",
+			skipColumnLineage: input.SkipColumnLineage,
+		}
 		p.parseBatch()
 		allSymbols = append(allSymbols, p.symbols...)
 		allRefs = append(allRefs, p.refs...)
@@ -51,6 +58,16 @@ func (t *TSQLParser) Parse(input parser.FileInput) (*parser.ParseResult, error) 
 		References:       allRefs,
 		ColumnReferences: allColRefs,
 	}, nil
+}
+
+// stripTemplateTokens removes common SQL template placeholders used by frameworks
+// like DNN Platform (e.g. {databaseOwner}, {objectQualifier}).
+func stripTemplateTokens(content string) string {
+	r := strings.NewReplacer(
+		"{databaseOwner}", "dbo.",
+		"{objectQualifier}", "",
+	)
+	return r.Replace(content)
 }
 
 func splitBatches(tokens []Token) [][]Token {
@@ -244,7 +261,23 @@ func (p *Parser) parseCreateView(startLine int) {
 	}
 	if p.matchKeyword("AS") {
 		p.advance()
+		colRefsBefore := len(p.colRefs)
 		p.parseSelect(name)
+
+		// Create column children for the view from the SELECT output columns.
+		// This ensures view columns exist as symbols so lineage edges can resolve.
+		for _, ref := range p.colRefs[colRefsBefore:] {
+			parts := strings.Split(ref.TargetColumn, ".")
+			colName := parts[len(parts)-1]
+			sym.Children = append(sym.Children, parser.Symbol{
+				Name:          colName,
+				QualifiedName: ref.TargetColumn,
+				Kind:          "column",
+				Language:      "tsql",
+				StartLine:     ref.Line,
+				EndLine:       ref.Line,
+			})
+		}
 	}
 
 	sym.EndLine = p.currentLine()
@@ -445,25 +478,36 @@ func (p *Parser) parseSelect(context string) {
 	// Parse select columns before FROM
 	selectItems := p.parseSelectColumns()
 
+	// Collect FROM tables with aliases for column qualification
+	fromTables := make(map[string]string)
 	if p.matchKeyword("FROM") {
 		p.advance()
-		p.parseTableReferences(context, "reads_from")
+		fromTables = p.collectFromTables(context, "reads_from")
 	}
 
-	// Build alias map from FROM/JOIN clauses and generate column references
-	// Also look for JOINs
+	// Process JOINs — also collect table aliases
 	for p.pos < len(p.tokens) && !p.matchPunct(";") && !p.matchKeyword("UNION") {
-		if p.matchKeyword("JOIN") {
-			p.advance()
-			name := p.readQualifiedName()
-			if name != "" && context != "" {
-				p.refs = append(p.refs, parser.RawReference{
-					FromSymbol:    context,
-					ToName:        unqualify(name),
-					ToQualified:   name,
-					ReferenceType: "joins",
-					Line:          p.current().Line,
-				})
+		if p.matchKeyword("JOIN") || p.matchKeyword("INNER") || p.matchKeyword("LEFT") || p.matchKeyword("RIGHT") || p.matchKeyword("CROSS") || p.matchKeyword("OUTER") || p.matchKeyword("FULL") {
+			// Advance past join type keywords until we get past JOIN
+			for p.matchKeyword("INNER") || p.matchKeyword("LEFT") || p.matchKeyword("RIGHT") || p.matchKeyword("CROSS") || p.matchKeyword("OUTER") || p.matchKeyword("FULL") || p.matchKeyword("JOIN") {
+				if p.matchKeyword("JOIN") {
+					p.advance()
+					break
+				}
+				p.advance()
+			}
+			name, alias := p.readTableWithAlias()
+			if name != "" {
+				fromTables[strings.ToLower(alias)] = name
+				if context != "" {
+					p.refs = append(p.refs, parser.RawReference{
+						FromSymbol:    context,
+						ToName:        unqualify(name),
+						ToQualified:   name,
+						ReferenceType: "joins",
+						Line:          p.currentLine(),
+					})
+				}
 			}
 		} else if p.matchPunct("(") {
 			p.skipParens()
@@ -472,15 +516,15 @@ func (p *Parser) parseSelect(context string) {
 		}
 	}
 
-	// Generate column references from parsed select items
-	if context != "" {
+	// Generate column references from parsed select items with qualified source columns
+	if context != "" && !p.skipColumnLineage {
 		for _, item := range selectItems {
 			if item.sourceColumn == "" {
 				continue
 			}
 			p.colRefs = append(p.colRefs, parser.ColumnReference{
-				SourceColumn:   item.sourceColumn,
-				TargetColumn:   item.alias,
+				SourceColumn:   qualifyColumn(item.sourceColumn, fromTables),
+				TargetColumn:   context + "." + item.alias,
 				DerivationType: item.derivationType,
 				Expression:     item.expression,
 				Context:        context,
@@ -575,8 +619,29 @@ func (p *Parser) parseSelectColumns() []selectItem {
 	return items
 }
 
+// mergeQualifiedTokens joins adjacent ident.ident sequences into single tokens.
+// e.g. ["o", ".", "OrderID"] → ["o.OrderID"]
+func mergeQualifiedTokens(tokens []string) []string {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	var result []string
+	i := 0
+	for i < len(tokens) {
+		name := tokens[i]
+		for i+2 < len(tokens) && tokens[i+1] == "." {
+			name += "." + tokens[i+2]
+			i += 2
+		}
+		result = append(result, name)
+		i++
+	}
+	return result
+}
+
 // classifySelectItem takes a token slice for one SELECT item and determines derivation type.
 func classifySelectItem(tokens []string) selectItem {
+	tokens = mergeQualifiedTokens(tokens)
 	if len(tokens) == 0 {
 		return selectItem{}
 	}
@@ -715,27 +780,41 @@ func (p *Parser) parseInsert(context string) {
 		}
 	}
 
-	// If followed by SELECT, correlate columns positionally
-	if p.matchKeyword("SELECT") && context != "" && targetTable != "" && len(targetCols) > 0 {
-		selectItems := func() []selectItem {
-			p.advance() // skip SELECT
-			return p.parseSelectColumns()
-		}()
+	// If followed by SELECT, correlate columns positionally.
+	// Allow both top-level (context="") and in-body (context=procName) INSERT...SELECT.
+	if p.matchKeyword("SELECT") && targetTable != "" && len(targetCols) > 0 {
+		p.advance() // skip SELECT
+		selectItems := p.parseSelectColumns()
 
-		for i, col := range targetCols {
-			if i < len(selectItems) {
-				srcCol := selectItems[i].sourceColumn
-				if srcCol == "" {
-					srcCol = selectItems[i].expression
+		// Read FROM tables for source column qualification
+		fromTables := make(map[string]string)
+		if p.matchKeyword("FROM") {
+			p.advance()
+			fromTables = p.collectFromTables(context, "reads_from")
+		}
+
+		// Use target table as context for top-level statements
+		effectiveContext := context
+		if effectiveContext == "" {
+			effectiveContext = targetTable
+		}
+
+		if !p.skipColumnLineage {
+			for i, col := range targetCols {
+				if i < len(selectItems) {
+					srcCol := selectItems[i].sourceColumn
+					if srcCol == "" {
+						srcCol = selectItems[i].expression
+					}
+					p.colRefs = append(p.colRefs, parser.ColumnReference{
+						SourceColumn:   qualifyColumn(srcCol, fromTables),
+						TargetColumn:   targetTable + "." + col,
+						DerivationType: selectItems[i].derivationType,
+						Expression:     selectItems[i].expression,
+						Context:        effectiveContext,
+						Line:           insertLine,
+					})
 				}
-				p.colRefs = append(p.colRefs, parser.ColumnReference{
-					SourceColumn:   srcCol,
-					TargetColumn:   targetTable + "." + col,
-					DerivationType: selectItems[i].derivationType,
-					Expression:     selectItems[i].expression,
-					Context:        context,
-					Line:           insertLine,
-				})
 			}
 		}
 	}
@@ -817,13 +896,14 @@ func (p *Parser) parseSetClause(context, targetTable string, line int) {
 			p.advance()
 		}
 
-		if len(exprTokens) > 0 {
-			exprStr := strings.Join(exprTokens, " ")
+		if len(exprTokens) > 0 && !p.skipColumnLineage {
+			merged := mergeQualifiedTokens(exprTokens)
+			exprStr := strings.Join(merged, " ")
 			derivation := "direct_copy"
 			if strings.Contains(exprStr, "(") || strings.ContainsAny(exprStr, "+-*/") {
 				derivation = "transform"
 			}
-			srcCol := extractFirstColumn(exprTokens)
+			srcCol := extractFirstColumn(merged)
 			if srcCol == "" {
 				srcCol = exprStr
 			}
@@ -886,19 +966,6 @@ func (p *Parser) parseMerge(context string) {
 			ToName:        unqualify(name),
 			ToQualified:   name,
 			ReferenceType: "writes_to",
-			Line:          p.current().Line,
-		})
-	}
-}
-
-func (p *Parser) parseTableReferences(context, refType string) {
-	name := p.readQualifiedName()
-	if name != "" && context != "" {
-		p.refs = append(p.refs, parser.RawReference{
-			FromSymbol:    context,
-			ToName:        unqualify(name),
-			ToQualified:   name,
-			ReferenceType: refType,
 			Line:          p.current().Line,
 		})
 	}
@@ -1025,4 +1092,93 @@ func (p *Parser) skipToCommaOrParen(depth int) {
 func unqualify(name string) string {
 	parts := strings.Split(name, ".")
 	return parts[len(parts)-1]
+}
+
+// readTableWithAlias reads a qualified table name optionally followed by [AS] alias.
+// Returns (qualifiedName, alias) where alias defaults to the unqualified table name.
+func (p *Parser) readTableWithAlias() (string, string) {
+	name := p.readQualifiedName()
+	if name == "" {
+		return "", ""
+	}
+	alias := unqualify(name)
+
+	if p.matchKeyword("AS") {
+		p.advance()
+	}
+	tok := p.current()
+	if tok.Type == TokenIdent {
+		alias = tok.Value
+		p.advance()
+	}
+
+	return name, alias
+}
+
+// collectFromTables reads the FROM clause (including comma-separated tables) and
+// returns an alias→qualifiedName map. Also appends reads_from references if context is set.
+func (p *Parser) collectFromTables(context, refType string) map[string]string {
+	fromTables := make(map[string]string)
+
+	name, alias := p.readTableWithAlias()
+	if name == "" {
+		return fromTables
+	}
+	fromTables[strings.ToLower(alias)] = name
+	if context != "" {
+		p.refs = append(p.refs, parser.RawReference{
+			FromSymbol:    context,
+			ToName:        unqualify(name),
+			ToQualified:   name,
+			ReferenceType: refType,
+			Line:          p.currentLine(),
+		})
+	}
+
+	// Handle comma-separated tables: FROM dbo.Users u, dbo.Roles r
+	for p.matchPunct(",") {
+		p.advance()
+		name, alias = p.readTableWithAlias()
+		if name == "" {
+			break
+		}
+		fromTables[strings.ToLower(alias)] = name
+		if context != "" {
+			p.refs = append(p.refs, parser.RawReference{
+				FromSymbol:    context,
+				ToName:        unqualify(name),
+				ToQualified:   name,
+				ReferenceType: refType,
+				Line:          p.currentLine(),
+			})
+		}
+	}
+
+	return fromTables
+}
+
+// qualifyColumn resolves a column reference using FROM-clause table aliases.
+// "alias.Col" → "schema.table.Col", bare "Col" → "schema.table.Col" if single FROM table.
+func qualifyColumn(col string, fromTables map[string]string) string {
+	if col == "" || len(fromTables) == 0 {
+		return col
+	}
+
+	parts := strings.SplitN(col, ".", 2)
+	if len(parts) == 2 {
+		// Has a table qualifier like "t.PortalID" — resolve alias
+		if table, ok := fromTables[strings.ToLower(parts[0])]; ok {
+			return table + "." + parts[1]
+		}
+		return col
+	}
+
+	// Bare name — qualify with the single FROM table if unambiguous
+	if len(fromTables) == 1 {
+		for _, table := range fromTables {
+			return table + "." + col
+		}
+	}
+
+	return col
 }

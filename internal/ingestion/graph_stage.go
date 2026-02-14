@@ -47,18 +47,29 @@ func (s *GraphStage) Execute(ctx context.Context, rc *IndexRunContext) error {
 		slog.Int("edges", len(edges)))
 
 	// Sync files
+	s.logger.Info("neo4j: syncing files", slog.Int("count", len(files)))
 	if err := s.graph.SyncFiles(ctx, rc.ProjectID, files); err != nil {
 		return fmt.Errorf("sync files to neo4j: %w", err)
 	}
+	s.logger.Info("neo4j: files synced")
 
 	// Sync symbols
+	s.logger.Info("neo4j: syncing symbols", slog.Int("count", len(symbols)))
 	if err := s.graph.SyncSymbols(ctx, rc.ProjectID, symbols); err != nil {
 		return fmt.Errorf("sync symbols to neo4j: %w", err)
 	}
+	s.logger.Info("neo4j: symbols synced")
 
-	// Sync edges
+	// Sync edges (DEPENDS_ON relationships)
+	s.logger.Info("neo4j: syncing edges", slog.Int("count", len(edges)))
 	if err := s.graph.SyncEdges(ctx, rc.ProjectID, edges); err != nil {
 		return fmt.Errorf("sync edges to neo4j: %w", err)
+	}
+	s.logger.Info("neo4j: edges synced")
+
+	// Sync column-level edges (COLUMN_FLOW relationships)
+	if err := s.graph.SyncColumnEdges(ctx, rc.ProjectID, edges); err != nil {
+		return fmt.Errorf("sync column edges to neo4j: %w", err)
 	}
 
 	return nil

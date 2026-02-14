@@ -13,9 +13,10 @@ type Parser interface {
 
 // FileInput represents a file to be parsed.
 type FileInput struct {
-	Path     string
-	Content  []byte
-	Language string
+	Path               string
+	Content            []byte
+	Language           string
+	SkipColumnLineage  bool // if true, parsers should not extract column-level lineage (e.g. migration/schema files)
 }
 
 // ColumnReference represents a column-level data flow relationship.

@@ -39,4 +39,7 @@ type IndexRunContext struct {
 
 	// Carried from parse to resolve stage (in-memory)
 	ParseResults []parser.FileResult
+
+	// Optional: path patterns to exclude from column lineage (from project.settings lineage_exclude_paths)
+	LineageExcludePaths []string
 }

@@ -9,14 +9,14 @@ import (
 	"github.com/codegraph-labs/codegraph/internal/store"
 )
 
-// EmbedStage generates vector embeddings for symbols via AWS Bedrock.
+// EmbedStage generates vector embeddings for symbols.
 type EmbedStage struct {
-	client *embedding.Client
+	client embedding.Embedder
 	store  *store.Store
 	logger *slog.Logger
 }
 
-func NewEmbedStage(client *embedding.Client, s *store.Store, logger *slog.Logger) *EmbedStage {
+func NewEmbedStage(client embedding.Embedder, s *store.Store, logger *slog.Logger) *EmbedStage {
 	return &EmbedStage{client: client, store: s, logger: logger}
 }
 

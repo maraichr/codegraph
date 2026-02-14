@@ -15,7 +15,7 @@ func New() *Parser {
 }
 
 func (p *Parser) Languages() []string {
-	return []string{"asp"}
+	return []string{"asp", "aspx"}
 }
 
 func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
@@ -23,6 +23,10 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 
 	var symbols []parser.Symbol
 	var refs []parser.RawReference
+
+	// Extract ASP.NET directives from <%@ ... %> blocks
+	dirRefs := extractDirectives(content)
+	refs = append(refs, dirRefs...)
 
 	// Extract VBScript regions from <% ... %>
 	regions := extractScriptRegions(content)
@@ -33,11 +37,16 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 		symbols = append(symbols, syms...)
 		refs = append(refs, rfs...)
 
-		// Extract embedded SQL from ADO patterns
+		// Extract embedded SQL from ADO patterns; set FromSymbol to enclosing function/sub for cross-language resolution
 		sqlFragments := ExtractSQL(region.code)
 		for _, frag := range sqlFragments {
-			// Sub-parse SQL for table/column references
 			sqlRefs := extractSQLRefs(frag.SQL, frag.Line+region.startLine)
+			line := frag.Line + region.startLine
+			fromSymbol := enclosingSymbol(line, syms)
+			for i := range sqlRefs {
+				sqlRefs[i].FromSymbol = fromSymbol
+				sqlRefs[i].ToQualified = "dbo." + sqlRefs[i].ToName
+			}
 			refs = append(refs, sqlRefs...)
 		}
 	}
@@ -220,6 +229,23 @@ func findEndLine(lines []string, startIdx int, kind string) int {
 	return startIdx + 1
 }
 
+// enclosingSymbol returns the qualified name of the innermost symbol (function/sub/class) that contains the given line.
+func enclosingSymbol(line int, symbols []parser.Symbol) string {
+	var best *parser.Symbol
+	for i := range symbols {
+		s := &symbols[i]
+		if s.StartLine <= line && line <= s.EndLine {
+			if best == nil || (s.EndLine-s.StartLine) < (best.EndLine-best.StartLine) {
+				best = s
+			}
+		}
+	}
+	if best == nil {
+		return ""
+	}
+	return best.QualifiedName
+}
+
 func parseIncludes(content string) []parser.RawReference {
 	var refs []parser.RawReference
 
@@ -289,4 +315,83 @@ func isSQLKeyword(s string) bool {
 		"VALUES": true, "INTO": true, "TABLE": true, "AS": true,
 	}
 	return kw[strings.ToUpper(s)]
+}
+
+// extractDirectives parses ASP.NET <%@ ... %> directive blocks.
+func extractDirectives(content string) []parser.RawReference {
+	var refs []parser.RawReference
+
+	re := regexp.MustCompile(`(?i)<%@\s*(Page|Control|Master|Register|Import)\s+([^%]+?)%>`)
+	for _, match := range re.FindAllStringSubmatch(content, -1) {
+		if len(match) < 3 {
+			continue
+		}
+		directive := strings.ToLower(match[1])
+		attrs := match[2]
+		line := strings.Count(content[:strings.Index(content, match[0])], "\n") + 1
+
+		switch directive {
+		case "page", "control", "master":
+			// CodeBehind="Foo.aspx.cs" or CodeFile="Foo.aspx.cs"
+			if cb := extractAttrValue(attrs, "CodeBehind"); cb != "" {
+				refs = append(refs, parser.RawReference{
+					ToName:        cb,
+					ReferenceType: "imports",
+					Line:          line,
+				})
+			}
+			if cf := extractAttrValue(attrs, "CodeFile"); cf != "" {
+				refs = append(refs, parser.RawReference{
+					ToName:        cf,
+					ReferenceType: "imports",
+					Line:          line,
+				})
+			}
+			// Inherits="MyApp.UsersPage"
+			if inh := extractAttrValue(attrs, "Inherits"); inh != "" {
+				refs = append(refs, parser.RawReference{
+					ToName:        inh,
+					ReferenceType: "inherits",
+					Line:          line,
+				})
+			}
+
+		case "import":
+			// Namespace="System.Data"
+			if ns := extractAttrValue(attrs, "Namespace"); ns != "" {
+				refs = append(refs, parser.RawReference{
+					ToName:        ns,
+					ReferenceType: "imports",
+					Line:          line,
+				})
+			}
+
+		case "register":
+			// Assembly="..." Namespace="..."
+			if ns := extractAttrValue(attrs, "Namespace"); ns != "" {
+				refs = append(refs, parser.RawReference{
+					ToName:        ns,
+					ReferenceType: "imports",
+					Line:          line,
+				})
+			}
+			if src := extractAttrValue(attrs, "Src"); src != "" {
+				refs = append(refs, parser.RawReference{
+					ToName:        src,
+					ReferenceType: "imports",
+					Line:          line,
+				})
+			}
+		}
+	}
+
+	return refs
+}
+
+func extractAttrValue(attrs, name string) string {
+	re := regexp.MustCompile(`(?i)` + name + `\s*=\s*"([^"]*)"`)
+	if m := re.FindStringSubmatch(attrs); len(m) >= 2 {
+		return m[1]
+	}
+	return ""
 }

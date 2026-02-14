@@ -103,9 +103,13 @@ func (e *Engine) Resolve(ctx context.Context, projectID uuid.UUID, parseResults 
 			if !ok {
 				// Source symbol not in this file's scope — try project-wide
 				sourceID, ok = table.ByFQN[ref.FromSymbol]
-				if !ok {
-					continue
-				}
+			}
+			// When FromSymbol is empty but ToName is set (e.g. C# [Table("X")] fallback), infer source from this file's symbols
+			if !ok && ref.FromSymbol == "" && ref.ToName != "" && ref.ReferenceType == "uses_table" {
+				sourceID = inferSourceFromFileSymbols(fileID, table)
+			}
+			if sourceID == uuid.Nil {
+				continue
 			}
 
 			// Try to resolve the target
@@ -190,4 +194,14 @@ func resolveTarget(ref parser.RawReference, localScope map[string]uuid.UUID, tab
 func shortNameOf(qualifiedName string) string {
 	parts := strings.Split(qualifiedName, ".")
 	return parts[len(parts)-1]
+}
+
+// inferSourceFromFileSymbols returns one symbol ID from the file when refs have no FromSymbol (e.g. C# uses_table).
+// Used so that [Table("X")] or inline SQL refs can still create an edge from the enclosing type.
+func inferSourceFromFileSymbols(fileID uuid.UUID, table *SymbolTable) uuid.UUID {
+	ids := table.ByFile[fileID]
+	if len(ids) == 0 {
+		return uuid.Nil
+	}
+	return ids[0]
 }

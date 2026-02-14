@@ -164,3 +164,12 @@ CREATE TABLE symbol_embeddings (
 CREATE INDEX idx_symbol_embeddings_hnsw ON symbol_embeddings
     USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
+
+-- =============================================================================
+-- Seed Data
+-- =============================================================================
+
+INSERT INTO users (id, email, name) VALUES
+    ('00000000-0000-0000-0000-000000000001', 'admin@codegraph.dev', 'Admin'),
+    ('00000000-0000-0000-0000-000000000002', 'dev@codegraph.dev', 'Developer')
+ON CONFLICT (email) DO NOTHING;

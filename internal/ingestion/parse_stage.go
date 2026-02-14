@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/codegraph-labs/codegraph/internal/parser"
 	"github.com/codegraph-labs/codegraph/internal/store"
@@ -105,16 +106,21 @@ func (s *ParseStage) parseFile(rc *IndexRunContext, absPath, relPath string, inf
 		return nil
 	}
 
-	// Detect SQL dialect for .sql files
+	// Detect SQL dialect for SQL files
+	ext := strings.ToLower(filepath.Ext(absPath))
 	language := "sql"
-	if filepath.Ext(absPath) == ".sql" {
+	if ext == ".sql" || ext == ".sqldataprovider" {
 		language = parser.DetectDialect(content)
 	}
 
+	// Classify migration/schema files: skip column-level lineage to avoid direct_copy explosion
+	skipColumnLineage := isMigrationOrSchemaFile(relPath, rc.LineageExcludePaths)
+
 	input := parser.FileInput{
-		Path:     relPath,
-		Content:  content,
-		Language: language,
+		Path:              relPath,
+		Content:           content,
+		Language:          language,
+		SkipColumnLineage: skipColumnLineage,
 	}
 
 	result, err := p.Parse(input)
@@ -135,4 +141,36 @@ func (s *ParseStage) parseFile(rc *IndexRunContext, absPath, relPath string, inf
 		References:       result.References,
 		ColumnReferences: result.ColumnReferences,
 	}
+}
+
+// isMigrationOrSchemaFile returns true for paths that look like migration or schema DDL
+// (e.g. Database/, Migrations/, Scripts/, *.Install.sql, *.Upgrade.sql), DNN-style paths
+// (DNN Platform/, Dnn.AdminExperience/, Providers/), or that match project lineage_exclude_paths.
+func isMigrationOrSchemaFile(relPath string, lineageExcludePaths []string) bool {
+	norm := strings.ReplaceAll(relPath, "\\", "/")
+	lower := strings.ToLower(norm)
+	if strings.Contains(lower, "database/") || strings.Contains(lower, "migrations/") ||
+		strings.Contains(lower, "scripts/") || strings.Contains(lower, "/database/") ||
+		strings.Contains(lower, "/migrations/") || strings.Contains(lower, "/scripts/") {
+		return true
+	}
+	// DNN Platform conventions: DataProvider SQL and schema under these paths
+	if strings.Contains(lower, "dnn platform/") || strings.Contains(lower, "dnn.adminexperience/") ||
+		strings.Contains(lower, "providers/") {
+		return true
+	}
+	if strings.HasSuffix(lower, ".install.sql") || strings.HasSuffix(lower, ".upgrade.sql") {
+		return true
+	}
+	for _, pattern := range lineageExcludePaths {
+		matched, _ := filepath.Match(strings.ToLower(pattern), lower)
+		if matched {
+			return true
+		}
+		// Also support simple substring match if pattern has no glob chars
+		if !strings.ContainsAny(pattern, "*?[\\") && strings.Contains(lower, strings.ToLower(pattern)) {
+			return true
+		}
+	}
+	return false
 }

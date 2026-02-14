@@ -1,6 +1,9 @@
 -- name: GetProject :one
 SELECT * FROM projects WHERE slug = $1 LIMIT 1;
 
+-- name: GetProjectByID :one
+SELECT * FROM projects WHERE id = $1 LIMIT 1;
+
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC LIMIT $1 OFFSET $2;
 

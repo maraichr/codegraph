@@ -90,6 +90,10 @@ func IndexRunListFailed(cause error) *Error {
 	return Wrap(CodeIndexRunListFailed, http.StatusInternalServerError, "Failed to list index runs", cause)
 }
 
+func NoSources() *Error {
+	return New(CodeNoSources, http.StatusBadRequest, "Project has no sources to index")
+}
+
 // --- Symbol ---
 
 func SymbolNotFound() *Error {

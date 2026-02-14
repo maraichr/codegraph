@@ -9,18 +9,20 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/codegraph-labs/codegraph/internal/ingestion"
 	"github.com/codegraph-labs/codegraph/internal/store"
 	"github.com/codegraph-labs/codegraph/internal/store/postgres"
 	"github.com/codegraph-labs/codegraph/pkg/apierr"
 )
 
 type IndexRunHandler struct {
-	logger *slog.Logger
-	store  *store.Store
+	logger   *slog.Logger
+	store    *store.Store
+	producer *ingestion.Producer
 }
 
-func NewIndexRunHandler(logger *slog.Logger, s *store.Store) *IndexRunHandler {
-	return &IndexRunHandler{logger: logger, store: s}
+func NewIndexRunHandler(logger *slog.Logger, s *store.Store, producer *ingestion.Producer) *IndexRunHandler {
+	return &IndexRunHandler{logger: logger, store: s, producer: producer}
 }
 
 func (h *IndexRunHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -76,26 +78,69 @@ func (h *IndexRunHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Optional source_id from query or body
-	var sourceID pgtype.UUID
 	if sid := r.URL.Query().Get("source_id"); sid != "" {
 		parsed, err := uuid.Parse(sid)
 		if err != nil {
 			writeAPIError(w, h.logger, apierr.InvalidSourceID())
 			return
 		}
-		sourceID = pgtype.UUID{Bytes: parsed, Valid: true}
+		source, err := h.store.GetSource(r.Context(), parsed)
+		if err != nil {
+			writeAPIError(w, h.logger, apierr.SourceNotFound())
+			return
+		}
+		run := h.triggerSource(w, r, project.ID, source)
+		if run == nil {
+			return
+		}
+		writeJSON(w, http.StatusCreated, run)
+		return
 	}
 
+	// No source_id — trigger all sources for this project
+	sources, err := h.store.ListSourcesByProjectID(r.Context(), project.ID)
+	if err != nil || len(sources) == 0 {
+		writeAPIError(w, h.logger, apierr.NoSources())
+		return
+	}
+
+	var runs []postgres.IndexRun
+	for _, source := range sources {
+		run := h.triggerSource(w, r, project.ID, source)
+		if run == nil {
+			return // error already written
+		}
+		runs = append(runs, *run)
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"index_runs": runs,
+	})
+}
+
+func (h *IndexRunHandler) triggerSource(w http.ResponseWriter, r *http.Request, projectID uuid.UUID, source postgres.Source) *postgres.IndexRun {
+	sourceID := pgtype.UUID{Bytes: source.ID, Valid: true}
 	run, err := h.store.CreateIndexRun(r.Context(), postgres.CreateIndexRunParams{
-		ProjectID: project.ID,
+		ProjectID: projectID,
 		SourceID:  sourceID,
 	})
 	if err != nil {
 		writeAPIError(w, h.logger, apierr.IndexRunCreateFailed(err))
-		return
+		return nil
 	}
 
-	// TODO: enqueue to Valkey stream for worker pickup
+	if h.producer != nil {
+		msg := ingestion.IngestMessage{
+			IndexRunID: run.ID,
+			ProjectID:  projectID,
+			SourceID:   source.ID,
+			SourceType: source.SourceType,
+			Trigger:    "manual",
+		}
+		if _, err := h.producer.Enqueue(r.Context(), msg); err != nil {
+			h.logger.Error("enqueue ingestion", slog.String("error", err.Error()))
+		}
+	}
 
-	writeJSON(w, http.StatusCreated, run)
+	return &run
 }

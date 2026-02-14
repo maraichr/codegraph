@@ -8,13 +8,14 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Neo4j    Neo4jConfig
-	Bedrock  BedrockConfig
-	Valkey   ValkeyConfig
-	MinIO    MinIOConfig
-	S3       S3Config
+	Server     ServerConfig
+	Database   DatabaseConfig
+	Neo4j      Neo4jConfig
+	Bedrock    BedrockConfig
+	OpenRouter OpenRouterConfig
+	Valkey     ValkeyConfig
+	MinIO      MinIOConfig
+	S3         S3Config
 }
 
 type ServerConfig struct {
@@ -65,6 +66,13 @@ type MinIOConfig struct {
 	UseSSL    bool
 }
 
+type OpenRouterConfig struct {
+	APIKey     string // OPENROUTER_API_KEY
+	Model      string // OPENROUTER_MODEL (default: openai/text-embedding-3-small)
+	BaseURL    string // OPENROUTER_BASE_URL (default: https://openrouter.ai/api/v1/embeddings)
+	Dimensions int    // OPENROUTER_DIMENSIONS (default: 1024, matches DB vector column)
+}
+
 type S3Config struct {
 	Region   string // S3_REGION
 	Bucket   string // S3_BUCKET
@@ -96,8 +104,14 @@ func Load() (*Config, error) {
 			Password: getEnv("NEO4J_PASSWORD", "codegraph"),
 		},
 		Bedrock: BedrockConfig{
-			Region:  getEnv("BEDROCK_REGION", "us-east-1"),
+			Region:  getEnv("BEDROCK_REGION", ""),
 			ModelID: getEnv("BEDROCK_MODEL_ID", "cohere.embed-english-v4"),
+		},
+		OpenRouter: OpenRouterConfig{
+			APIKey:     getEnv("OPENROUTER_API_KEY", ""),
+			Model:      getEnv("OPENROUTER_MODEL", ""),
+			BaseURL:    getEnv("OPENROUTER_BASE_URL", ""),
+			Dimensions: getEnvInt("OPENROUTER_DIMENSIONS", 1024),
 		},
 		Valkey: ValkeyConfig{
 			Addr:     getEnv("VALKEY_ADDR", "localhost:6379"),

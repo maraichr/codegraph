@@ -14,7 +14,7 @@ import (
 
 // EmbedSymbols generates and stores embeddings for all symbols in a project
 // that don't already have them. Returns the number of symbols embedded.
-func EmbedSymbols(ctx context.Context, client *Client, s *store.Store, projectID uuid.UUID, logger *slog.Logger) (int, error) {
+func EmbedSymbols(ctx context.Context, client Embedder, s *store.Store, projectID uuid.UUID, logger *slog.Logger) (int, error) {
 	// Find symbols without embeddings
 	symbols, err := s.ListSymbolsWithoutEmbeddings(ctx, projectID)
 	if err != nil {
@@ -49,7 +49,7 @@ func EmbedSymbols(ctx context.Context, client *Client, s *store.Store, projectID
 		err := s.UpsertSymbolEmbedding(ctx, postgres.UpsertSymbolEmbeddingParams{
 			SymbolID:  sym.ID,
 			Embedding: vec,
-			Model:     client.modelID,
+			Model:     client.ModelID(),
 		})
 		if err != nil {
 			return i, fmt.Errorf("upsert embedding for %s: %w", sym.QualifiedName, err)

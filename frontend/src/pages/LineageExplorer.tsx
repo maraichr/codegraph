@@ -186,6 +186,8 @@ export function LineageExplorer() {
       });
     }
 
+    if (elements.length === 0) return;
+
     cy.add(elements);
 
     // Highlight root
@@ -194,15 +196,17 @@ export function LineageExplorer() {
       root.addClass("highlighted");
     }
 
-    // Left-to-right dagre layout
-    cy.layout({
-      name: "breadthfirst",
-      directed: true,
-      animate: true,
-      animationDuration: 500,
-    } as cytoscape.LayoutOptions).run();
+    // Run layout only when there are nodes
+    if (cy.nodes().length > 0) {
+      cy.layout({
+        name: "breadthfirst",
+        directed: true,
+        animate: true,
+        animationDuration: 500,
+      } as cytoscape.LayoutOptions).run();
 
-    cy.fit(undefined, 40);
+      cy.fit(undefined, 40);
+    }
   }, [lineageData, selectedDerivations]);
 
   const handleColumnSelect = useCallback((columnId: string) => {
@@ -218,15 +222,6 @@ export function LineageExplorer() {
         <h2 className="text-lg font-semibold text-gray-900">
           Column Lineage Explorer
         </h2>
-        <div className="flex-1">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search columns..."
-            className="w-full max-w-md rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
       </div>
 
       <LineageControls
@@ -240,52 +235,85 @@ export function LineageExplorer() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Search results sidebar */}
-        {searchQuery.length >= 2 && searchResults && (
-          <div className="w-64 overflow-y-auto border-r border-gray-200 bg-gray-50 p-2">
-            <p className="mb-2 text-xs font-medium text-gray-500">
-              {searchResults.count} column
-              {searchResults.count !== 1 ? "s" : ""}
-            </p>
-            <ul className="space-y-1">
-              {searchResults.symbols.map((sym) => (
-                <li key={sym.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleColumnSelect(sym.id)}
-                    className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
-                      selectedColumnId === sym.id
-                        ? "bg-white ring-1 ring-blue-300"
-                        : ""
-                    }`}
-                  >
-                    <div className="font-medium text-gray-900">{sym.name}</div>
-                    <div className="text-gray-500">{sym.qualified_name}</div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+        {/* Column search sidebar — always visible */}
+        <div className="flex w-72 flex-col border-r border-gray-200 bg-gray-50">
+          <div className="border-b border-gray-200 p-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search columns..."
+              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
-        )}
+          <div className="flex-1 overflow-y-auto p-2">
+            {searchQuery.length < 2 ? (
+              <p className="px-2 py-4 text-center text-xs text-gray-400">
+                Type at least 2 characters to search columns.
+              </p>
+            ) : !searchResults ? (
+              <p className="px-2 py-4 text-center text-xs text-gray-400">
+                Searching...
+              </p>
+            ) : searchResults.count === 0 ? (
+              <p className="px-2 py-4 text-center text-xs text-gray-400">
+                No columns found.
+              </p>
+            ) : (
+              <>
+                <p className="mb-2 text-xs font-medium text-gray-500">
+                  {searchResults.count} column
+                  {searchResults.count !== 1 ? "s" : ""}
+                </p>
+                <ul className="space-y-1">
+                  {searchResults.symbols.map((sym) => (
+                    <li key={sym.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleColumnSelect(sym.id)}
+                        className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
+                          selectedColumnId === sym.id
+                            ? "bg-white ring-1 ring-blue-300"
+                            : ""
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900">
+                          {sym.name}
+                        </div>
+                        <div className="truncate text-gray-500">
+                          {sym.qualified_name}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Graph canvas */}
-        <div className="flex-1">
-          {lineageData ? (
-            <div
-              ref={containerRef}
-              className="h-full w-full"
-              style={{ minHeight: "500px" }}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-gray-400">
-              <div ref={containerRef} className="hidden" />
+        <div className="relative flex-1">
+          <div
+            ref={containerRef}
+            className="h-full w-full"
+            style={{ minHeight: "500px" }}
+          />
+          {!lineageData ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-400">
               <p className="text-sm">
                 {selectedColumnId
                   ? "Loading column lineage..."
-                  : "Search for a column and select it to view its data flow lineage."}
+                  : "Select a column from the sidebar to view its data flow lineage."}
               </p>
             </div>
-          )}
+          ) : lineageData.nodes.length === 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-400">
+              <p className="text-sm">
+                No column lineage found for this column.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* Detail panel */}

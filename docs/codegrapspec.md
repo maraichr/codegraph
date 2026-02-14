@@ -781,9 +781,11 @@ type RawReference struct {
 
 ### 6.6 .NET Parser (C#, VB.NET, F#)
 
-**Parsing Strategy:** Use Roslyn-based analysis via a sidecar .NET tool invoked from Go. The Go worker shells out to a .NET CLI tool (`dotnet codegraph-analyzer`) that uses Roslyn's semantic model for full type resolution. Output is JSON streamed back to Go.
+**Parsing Strategy (current):** Tree-sitter C# parser (Go-native). Extracts symbols and references; `[Table("...")]`, `DbSet<T>`, and inline SQL (FromSqlRaw, Query, etc.) produce `uses_table` references with `FromSymbol` set to the enclosing class so that cross-language resolution can link C# types to T-SQL tables.
 
-**Sidecar Architecture:**
+**C# → SQL resolution:** The resolver applies `schema_qualified` and `case_insensitive` bridge rules so that C# table names resolve to `dbo.TableName` and other T-SQL symbols. Refs with empty `FromSymbol` (e.g. attribute-only) fall back to the first symbol in the file for edge creation.
+
+**Sidecar Architecture (future):**
 ```
 Go Worker → spawns → dotnet codegraph-analyzer --project {path} --output json
                      (uses Roslyn MSBuildWorkspace for full semantic analysis)
@@ -851,6 +853,16 @@ Go Worker → spawns → dotnet codegraph-analyzer --project {path} --output jso
 - **Lombok:** Detect `@Data`, `@Getter`, `@Setter`, `@Builder` and synthesize the implied methods/fields
 - **MyBatis XML parsing:** Dedicated XML parser for mapper files with dynamic SQL (`<if>`, `<choose>`, `<foreach>`) handling
 - **`application.yml` parsing:** Resolve property placeholders (`${db.url}`)
+
+### 6.8 Migration and schema file handling
+
+Files that look like migration or schema DDL are classified so that **column-level lineage is not extracted** for them, avoiding large numbers of low-value `direct_copy` edges from `INSERT...SELECT` and similar patterns.
+
+**Classification:** Paths containing `Database/`, `Migrations/`, `Scripts/`, or with suffixes `.Install.sql` / `.Upgrade.sql`; DNN-style paths (`DNN Platform/`, `Dnn.AdminExperience/`, `Providers/`); or any pattern in project `settings.lineage_exclude_paths` (glob or substring).
+
+**Behaviour:** `FileInput.SkipColumnLineage` is set for these files. The T-SQL parser skips appending to `colRefs` in SELECT, INSERT, UPDATE, and SET clause handling when `SkipColumnLineage` is true. Symbols are still extracted; only column-to-column lineage edges are omitted.
+
+See **ADR-001-migration-symbol-consolidation** for the decision to treat migrations as schema evolution rather than runtime data flow for lineage.
 
 ---
 

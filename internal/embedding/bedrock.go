@@ -92,4 +92,7 @@ func (c *Client) embedSingle(ctx context.Context, texts []string, inputType stri
 	return result.Embeddings, nil
 }
 
+// ModelID returns the Bedrock model identifier.
+func (c *Client) ModelID() string { return c.modelID }
+
 func strPtr(s string) *string { return &s }

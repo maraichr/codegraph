@@ -15,9 +15,12 @@ import (
 	"github.com/codegraph-labs/codegraph/internal/embedding"
 	"github.com/codegraph-labs/codegraph/internal/graph"
 	"github.com/codegraph-labs/codegraph/internal/impact"
+	"github.com/codegraph-labs/codegraph/internal/ingestion"
 	"github.com/codegraph-labs/codegraph/internal/lineage"
 	"github.com/codegraph-labs/codegraph/internal/store"
+	minioclient "github.com/codegraph-labs/codegraph/internal/store/minio"
 	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	vk "github.com/codegraph-labs/codegraph/internal/store/valkey"
 )
 
 func main() {
@@ -57,15 +60,32 @@ func main() {
 		logger.Info("connected to neo4j")
 	}
 
-	// Bedrock embeddings (optional)
-	if cfg.Bedrock.Region != "" {
-		embedClient, err := embedding.NewClient(cfg.Bedrock)
-		if err != nil {
-			logger.Warn("bedrock client init failed, semantic search disabled", slog.String("error", err.Error()))
-		} else {
-			deps.Embed = embedClient
-			logger.Info("bedrock embeddings enabled")
-		}
+	// MinIO (optional — enables uploads)
+	mc, err := minioclient.NewClient(cfg.MinIO)
+	if err != nil {
+		logger.Warn("minio connection failed, uploads disabled", slog.String("error", err.Error()))
+	} else {
+		deps.MinIO = mc
+		logger.Info("connected to minio")
+	}
+
+	// Valkey (optional — enables job queue)
+	vkClient, err := vk.NewClient(cfg.Valkey)
+	if err != nil {
+		logger.Warn("valkey connection failed, job queue disabled", slog.String("error", err.Error()))
+	} else {
+		deps.Producer = ingestion.NewProducer(vkClient)
+		defer vkClient.Close()
+		logger.Info("connected to valkey")
+	}
+
+	// Embeddings (auto-selects: OpenRouter > Bedrock > disabled)
+	embedder, err := embedding.NewEmbedder(cfg)
+	if err != nil {
+		logger.Warn("embedder init failed, semantic search disabled", slog.String("error", err.Error()))
+	} else if embedder != nil {
+		deps.Embed = embedder
+		logger.Info("embeddings enabled", slog.String("provider", fmt.Sprintf("%T", embedder)), slog.String("model", embedder.ModelID()))
 	}
 
 	router := api.NewRouter(logger, s, deps)

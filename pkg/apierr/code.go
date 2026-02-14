@@ -37,6 +37,7 @@ const (
 	CodeInvalidRunID        Code = "INVALID_RUN_ID"
 	CodeIndexRunCreateFailed Code = "INDEX_RUN_CREATE_FAILED"
 	CodeIndexRunListFailed   Code = "INDEX_RUN_LIST_FAILED"
+	CodeNoSources            Code = "NO_SOURCES"
 )
 
 // Symbol errors.

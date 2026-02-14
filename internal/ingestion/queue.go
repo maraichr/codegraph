@@ -82,7 +82,11 @@ func (c *Consumer) EnsureGroup(ctx context.Context) error {
 }
 
 // Consume blocks until a message is available, processes it via handler, and ACKs.
+// On startup, it first drains any pending messages from a previous crash.
 func (c *Consumer) Consume(ctx context.Context, handler func(context.Context, IngestMessage) error) error {
+	// First, drain pending messages from previous runs (Id "0" returns pending)
+	c.drainPending(ctx, handler)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -111,30 +115,60 @@ func (c *Consumer) Consume(ctx context.Context, handler func(context.Context, In
 
 		for _, messages := range results {
 			for _, msg := range messages {
-				dataStr, ok := msg.FieldValues["data"]
-				if !ok {
-					c.logger.Warn("message missing data field", slog.String("id", msg.ID))
-					c.ack(ctx, msg.ID)
-					continue
-				}
-
-				var ingestMsg IngestMessage
-				if err := json.Unmarshal([]byte(dataStr), &ingestMsg); err != nil {
-					c.logger.Error("unmarshal message", slog.String("error", err.Error()), slog.String("id", msg.ID))
-					c.ack(ctx, msg.ID)
-					continue
-				}
-
-				if err := handler(ctx, ingestMsg); err != nil {
-					c.logger.Error("handle message", slog.String("error", err.Error()),
-						slog.String("id", msg.ID),
-						slog.String("index_run_id", ingestMsg.IndexRunID.String()))
-					// Message stays pending for retry via XCLAIM
-				} else {
-					c.ack(ctx, msg.ID)
-				}
+				c.processMessage(ctx, msg, handler)
 			}
 		}
+	}
+}
+
+// drainPending reads messages previously delivered to this consumer but not ACKed.
+func (c *Consumer) drainPending(ctx context.Context, handler func(context.Context, IngestMessage) error) {
+	// XREADGROUP with Id "0" returns pending messages for this consumer
+	resp := c.client.Do(ctx, c.client.B().Xreadgroup().
+		Group(GroupName, c.consumerID).
+		Count(10).
+		Streams().Key(StreamName).Id("0").
+		Build())
+
+	if err := resp.Error(); err != nil {
+		c.logger.Warn("drain pending failed", slog.String("error", err.Error()))
+		return
+	}
+
+	results, err := resp.AsXRead()
+	if err != nil {
+		return
+	}
+
+	for _, messages := range results {
+		for _, msg := range messages {
+			c.logger.Info("recovering pending message", slog.String("id", msg.ID))
+			c.processMessage(ctx, msg, handler)
+		}
+	}
+}
+
+func (c *Consumer) processMessage(ctx context.Context, msg valkey.XRangeEntry, handler func(context.Context, IngestMessage) error) {
+	dataStr, ok := msg.FieldValues["data"]
+	if !ok {
+		c.logger.Warn("message missing data field", slog.String("id", msg.ID))
+		c.ack(ctx, msg.ID)
+		return
+	}
+
+	var ingestMsg IngestMessage
+	if err := json.Unmarshal([]byte(dataStr), &ingestMsg); err != nil {
+		c.logger.Error("unmarshal message", slog.String("error", err.Error()), slog.String("id", msg.ID))
+		c.ack(ctx, msg.ID)
+		return
+	}
+
+	if err := handler(ctx, ingestMsg); err != nil {
+		c.logger.Error("handle message", slog.String("error", err.Error()),
+			slog.String("id", msg.ID),
+			slog.String("index_run_id", ingestMsg.IndexRunID.String()))
+	} else {
+		c.ack(ctx, msg.ID)
 	}
 }
 

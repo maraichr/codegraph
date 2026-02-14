@@ -66,8 +66,139 @@ services:
       timeout: 5s
       retries: 5
 
+  neo4j-init:
+    image: neo4j:2026.01-community
+    container_name: codegraph-neo4j-init
+    entrypoint: >
+      sh -c "cat /import/init.cypher | cypher-shell -a bolt://neo4j:7687 -u neo4j -p codegraph"
+    volumes:
+      - ./migrations/neo4j:/import
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: codegraph-minio-init
+    entrypoint: >
+      sh -c "mc alias set local http://minio:9000 codegraph codegraph123 &&
+             mc mb local/codegraph --ignore-existing"
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  migrate:
+    image: golang:1.25
+    container_name: codegraph-migrate
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: >
+      sh -c "apt-get update -qq && apt-get install -y -qq postgresql-client > /dev/null 2>&1 &&
+             PGPASSWORD=codegraph psql -h postgres -U codegraph -d codegraph -f /app/migrations/postgres/000001_initial_schema.up.sql &&
+             PGPASSWORD=codegraph psql -h postgres -U codegraph -d codegraph -f /app/migrations/postgres/000002_phase3.up.sql"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: golang:1.25
+    container_name: codegraph-api
+    working_dir: /app
+    command: >
+      sh -c "go install github.com/air-verse/air@latest && air -c .air.api.toml"
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - gomodcache:/go/pkg/mod
+      - gobuildcache:/root/.cache/go-build
+    environment:
+      SERVER_HOST: "0.0.0.0"
+      SERVER_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: codegraph
+      DB_PASSWORD: codegraph
+      DB_NAME: codegraph
+      DB_SSLMODE: disable
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: codegraph
+      VALKEY_ADDR: valkey:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: codegraph
+      MINIO_SECRET_KEY: codegraph123
+      MINIO_BUCKET: codegraph
+      MINIO_USE_SSL: "false"
+      BEDROCK_REGION: ""
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "${OPENROUTER_MODEL:-}"
+      OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-}"
+      OPENROUTER_DIMENSIONS: "${OPENROUTER_DIMENSIONS:-1024}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+
+  worker:
+    image: golang:1.25
+    container_name: codegraph-worker
+    working_dir: /app
+    command: >
+      sh -c "go install github.com/air-verse/air@latest && air -c .air.worker.toml"
+    volumes:
+      - .:/app
+      - gomodcache:/go/pkg/mod
+      - gobuildcache:/root/.cache/go-build
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: codegraph
+      DB_PASSWORD: codegraph
+      DB_NAME: codegraph
+      DB_SSLMODE: disable
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: codegraph
+      VALKEY_ADDR: valkey:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: codegraph
+      MINIO_SECRET_KEY: codegraph123
+      MINIO_BUCKET: codegraph
+      MINIO_USE_SSL: "false"
+      BEDROCK_REGION: ""
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "${OPENROUTER_MODEL:-}"
+      OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-}"
+      OPENROUTER_DIMENSIONS: "${OPENROUTER_DIMENSIONS:-1024}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:
   neo4jdata:
   valkeydata:
   miniodata:
+  gomodcache:
+  gobuildcache:

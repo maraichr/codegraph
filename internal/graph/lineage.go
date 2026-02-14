@@ -62,7 +62,7 @@ func (c *Client) Lineage(ctx context.Context, symbolID uuid.UUID, direction stri
 		}
 
 		nodeMap := make(map[string]LineageNode)
-		var edges []LineageEdge
+		edges := []LineageEdge{}
 
 		for records.Next(ctx) {
 			record := records.Record()
@@ -151,26 +151,26 @@ func (c *Client) Lineage(ctx context.Context, symbolID uuid.UUID, direction stri
 
 // ColumnLineageNode represents a column in the column lineage graph.
 type ColumnLineageNode struct {
-	ID            string
-	Name          string
-	QualifiedName string
-	TableName     string
-	Kind          string
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	QualifiedName string `json:"qualified_name"`
+	TableName     string `json:"table_name"`
+	Kind          string `json:"kind"`
 }
 
 // ColumnLineageEdge represents a column-level data flow relationship.
 type ColumnLineageEdge struct {
-	SourceID       string
-	TargetID       string
-	DerivationType string
-	Expression     string
+	SourceID       string `json:"source_id"`
+	TargetID       string `json:"target_id"`
+	DerivationType string `json:"derivation_type"`
+	Expression     string `json:"expression"`
 }
 
 // ColumnLineageResult contains the result of a column-level lineage query.
 type ColumnLineageResult struct {
-	Nodes  []ColumnLineageNode
-	Edges  []ColumnLineageEdge
-	RootID string
+	Nodes  []ColumnLineageNode `json:"nodes"`
+	Edges  []ColumnLineageEdge `json:"edges"`
+	RootID string              `json:"root_column_id"`
 }
 
 // ColumnLineage queries Neo4j for column-level lineage via COLUMN_FLOW relationships.
@@ -201,7 +201,7 @@ func (c *Client) ColumnLineage(ctx context.Context, symbolID uuid.UUID, directio
 		}
 
 		nodeMap := make(map[string]ColumnLineageNode)
-		var edges []ColumnLineageEdge
+		edges := []ColumnLineageEdge{}
 
 		for records.Next(ctx) {
 			record := records.Record()

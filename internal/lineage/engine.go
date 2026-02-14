@@ -53,17 +53,37 @@ func (e *Engine) BuildColumnLineage(ctx context.Context, projectID uuid.UUID, co
 	}
 
 	created := 0
+	skipped := 0
 	for _, ref := range colRefs {
 		sourceID := resolveColumnID(ref.SourceColumn, fqnMap, symbolFQN)
 		targetID := resolveColumnID(ref.TargetColumn, fqnMap, symbolFQN)
 
+		// Fallback: if target is unresolvable (e.g. "proc.ColName"), try the
+		// parent symbol (e.g. "proc"). This creates column→procedure edges
+		// that let users trace which procedures read/write each column.
+		if targetID == uuid.Nil && ref.TargetColumn != "" {
+			if parts := strings.Split(ref.TargetColumn, "."); len(parts) > 1 {
+				parent := strings.Join(parts[:len(parts)-1], ".")
+				targetID = resolveColumnID(parent, fqnMap, symbolFQN)
+			}
+		}
+
+		// Same fallback for source: "@ParamName" won't resolve, but the
+		// procedure context might (e.g. UPDATE SET col = @param).
+		if sourceID == uuid.Nil && ref.SourceColumn != "" && ref.Context != "" {
+			sourceID = resolveColumnID(ref.Context, fqnMap, symbolFQN)
+		}
+
 		if sourceID == uuid.Nil || targetID == uuid.Nil || sourceID == targetID {
+			skipped++
 			continue
 		}
 
 		edgeType := mapDerivationToEdgeType(ref.DerivationType)
-		metadata := map[string]string{
+		confidence := derivationConfidence(ref.DerivationType)
+		metadata := map[string]interface{}{
 			"derivation_type": ref.DerivationType,
+			"confidence":      confidence,
 		}
 		if ref.Expression != "" {
 			metadata["expression"] = ref.Expression
@@ -85,6 +105,7 @@ func (e *Engine) BuildColumnLineage(ctx context.Context, projectID uuid.UUID, co
 
 	e.logger.Info("column lineage built",
 		slog.Int("edges_created", created),
+		slog.Int("refs_skipped", skipped),
 		slog.Int("column_refs_processed", len(colRefs)))
 
 	return created, nil
@@ -102,6 +123,7 @@ func (e *Engine) QueryColumnLineage(ctx context.Context, symbolID uuid.UUID, dir
 func resolveColumnID(name string, colMap, allMap map[string]uuid.UUID) uuid.UUID {
 	lower := strings.ToLower(name)
 
+	// Exact match
 	if id, ok := colMap[lower]; ok {
 		return id
 	}
@@ -109,7 +131,20 @@ func resolveColumnID(name string, colMap, allMap map[string]uuid.UUID) uuid.UUID
 		return id
 	}
 
-	// Short name fallback
+	// Suffix match: "table.col" matches "schema.table.col"
+	suffix := "." + lower
+	for fqn, id := range colMap {
+		if strings.HasSuffix(fqn, suffix) {
+			return id
+		}
+	}
+	for fqn, id := range allMap {
+		if strings.HasSuffix(fqn, suffix) {
+			return id
+		}
+	}
+
+	// Short name fallback (bare name without dots)
 	if !strings.Contains(name, ".") {
 		for fqn, id := range colMap {
 			parts := strings.Split(fqn, ".")
@@ -132,5 +167,19 @@ func mapDerivationToEdgeType(derivation string) string {
 		return "uses_column"
 	default:
 		return "uses_column"
+	}
+}
+
+// derivationConfidence returns a 0–1 score for lineage edge confidence (for filtering/down-ranking).
+func derivationConfidence(derivation string) float64 {
+	switch derivation {
+	case "transform", "aggregate", "conditional":
+		return 1.0
+	case "direct_copy":
+		return 0.9
+	case "filter", "join":
+		return 0.85
+	default:
+		return 0.7
 	}
 }

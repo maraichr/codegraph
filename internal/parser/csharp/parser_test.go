@@ -1,0 +1,402 @@
+package csharp
+
+import (
+	"testing"
+
+	"github.com/codegraph-labs/codegraph/internal/parser"
+)
+
+func TestBasicClassWithMembers(t *testing.T) {
+	src := `
+namespace MyApp.Models {
+    public class User {
+        private string _name;
+        public string Name { get; set; }
+        public int GetAge() { return 0; }
+        public User() {}
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "User.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	symbolMap := make(map[string]parser.Symbol)
+	for _, s := range result.Symbols {
+		symbolMap[s.QualifiedName] = s
+	}
+
+	assertSymbol(t, symbolMap, "MyApp.Models.User", "class")
+	assertSymbol(t, symbolMap, "MyApp.Models.User._name", "field")
+	assertSymbol(t, symbolMap, "MyApp.Models.User.Name", "property")
+	assertSymbol(t, symbolMap, "MyApp.Models.User.GetAge", "method")
+	assertSymbol(t, symbolMap, "MyApp.Models.User.User", "method") // constructor
+}
+
+func TestInterface(t *testing.T) {
+	src := `
+namespace MyApp {
+    public interface IRepository {
+        void Save();
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "IRepository.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertHasSymbol(t, result.Symbols, "MyApp.IRepository", "interface")
+}
+
+func TestStruct(t *testing.T) {
+	src := `
+namespace MyApp {
+    public struct Point {
+        public int X;
+        public int Y;
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Point.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertHasSymbol(t, result.Symbols, "MyApp.Point", "class") // structs stored as class
+	assertHasSymbol(t, result.Symbols, "MyApp.Point.X", "field")
+	assertHasSymbol(t, result.Symbols, "MyApp.Point.Y", "field")
+}
+
+func TestEnum(t *testing.T) {
+	src := `
+namespace MyApp {
+    public enum Status { Active, Inactive }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Status.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertHasSymbol(t, result.Symbols, "MyApp.Status", "enum")
+}
+
+func TestUsingDirectives(t *testing.T) {
+	src := `
+using System;
+using System.Data;
+namespace MyApp {
+    public class Foo {}
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Foo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imports := filterRefs(result.References, "imports")
+	if len(imports) < 2 {
+		t.Fatalf("expected at least 2 import refs, got %d", len(imports))
+	}
+	assertRefTarget(t, imports, "System")
+	assertRefTarget(t, imports, "System.Data")
+}
+
+func TestClassInheritance(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class User : BaseEntity {
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "User.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inherits := filterRefs(result.References, "inherits")
+	if len(inherits) != 1 {
+		t.Fatalf("expected 1 inherits ref, got %d", len(inherits))
+	}
+	if inherits[0].ToName != "BaseEntity" {
+		t.Errorf("expected inherits BaseEntity, got %s", inherits[0].ToName)
+	}
+}
+
+func TestInterfaceImplementation(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class UserService : IUserService {
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserService.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	impls := filterRefs(result.References, "implements")
+	if len(impls) != 1 {
+		t.Fatalf("expected 1 implements ref, got %d", len(impls))
+	}
+	if impls[0].ToName != "IUserService" {
+		t.Errorf("expected implements IUserService, got %s", impls[0].ToName)
+	}
+}
+
+func TestMixedBaseTypes(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class User : BaseEntity, IIdentifiable, IEquatable {
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "User.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inherits := filterRefs(result.References, "inherits")
+	impls := filterRefs(result.References, "implements")
+
+	if len(inherits) != 1 {
+		t.Fatalf("expected 1 inherits ref, got %d", len(inherits))
+	}
+	if inherits[0].ToName != "BaseEntity" {
+		t.Errorf("expected inherits BaseEntity, got %s", inherits[0].ToName)
+	}
+	if len(impls) != 2 {
+		t.Fatalf("expected 2 implements refs, got %d", len(impls))
+	}
+}
+
+func TestTableAttribute(t *testing.T) {
+	src := `
+using System.ComponentModel.DataAnnotations.Schema;
+namespace MyApp.Models {
+    [Table("Users")]
+    public class User {
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "User.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	if len(tableRefs) < 1 {
+		t.Fatalf("expected at least 1 uses_table ref, got %d", len(tableRefs))
+	}
+	assertRefTarget(t, tableRefs, "Users")
+}
+
+func TestDbSetProperty(t *testing.T) {
+	src := `
+namespace MyApp.Data {
+    public class AppDbContext {
+        public DbSet<User> Users { get; set; }
+        public DbSet<Order> Orders { get; set; }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "AppDbContext.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	if len(tableRefs) < 2 {
+		t.Fatalf("expected at least 2 uses_table refs, got %d", len(tableRefs))
+	}
+	assertRefTarget(t, tableRefs, "User")
+	assertRefTarget(t, tableRefs, "Order")
+}
+
+func TestFromSqlRaw(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class UserRepo {
+        public void GetUsers() {
+            var users = db.Users.FromSqlRaw("SELECT * FROM Users WHERE Active = 1");
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserRepo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "Users")
+}
+
+func TestDapperQuery(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class OrderRepo {
+        public void GetOrders() {
+            var orders = conn.Query("SELECT * FROM Orders WHERE Status = 1");
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "OrderRepo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "Orders")
+}
+
+func TestFileScopedNamespace(t *testing.T) {
+	src := `
+namespace MyApp.Models;
+
+public class Product {
+    public string Name { get; set; }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Product.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertHasSymbol(t, result.Symbols, "MyApp.Models.Product", "class")
+	assertHasSymbol(t, result.Symbols, "MyApp.Models.Product.Name", "property")
+}
+
+func TestNestedClass(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class Outer {
+        public class Inner {
+            public void DoWork() {}
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Outer.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertHasSymbol(t, result.Symbols, "MyApp.Outer", "class")
+	assertHasSymbol(t, result.Symbols, "MyApp.Inner", "class")
+}
+
+func TestLanguages(t *testing.T) {
+	p := New()
+	langs := p.Languages()
+	if len(langs) != 1 || langs[0] != "csharp" {
+		t.Errorf("expected [csharp], got %v", langs)
+	}
+}
+
+func TestFullSample(t *testing.T) {
+	src := `
+using System.Data;
+namespace MyApp.Models {
+    [Table("Users")]
+    public class User : BaseEntity, IIdentifiable {
+        public DbSet<Order> Orders { get; set; }
+        public string GetName() { return Name; }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "User.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Class symbol
+	assertHasSymbol(t, result.Symbols, "MyApp.Models.User", "class")
+
+	// Import
+	imports := filterRefs(result.References, "imports")
+	assertRefTarget(t, imports, "System.Data")
+
+	// Inheritance
+	inherits := filterRefs(result.References, "inherits")
+	assertRefTarget(t, inherits, "BaseEntity")
+
+	// Interface implementation
+	impls := filterRefs(result.References, "implements")
+	assertRefTarget(t, impls, "IIdentifiable")
+
+	// Table refs (attribute + DbSet)
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "Users")
+	assertRefTarget(t, tableRefs, "Order")
+}
+
+// --- helpers ---
+
+func assertSymbol(t *testing.T, symbolMap map[string]parser.Symbol, qname, kind string) {
+	t.Helper()
+	sym, ok := symbolMap[qname]
+	if !ok {
+		t.Errorf("missing symbol %s", qname)
+		return
+	}
+	if sym.Kind != kind {
+		t.Errorf("symbol %s: expected kind %s, got %s", qname, kind, sym.Kind)
+	}
+}
+
+func assertHasSymbol(t *testing.T, symbols []parser.Symbol, qname, kind string) {
+	t.Helper()
+	for _, s := range symbols {
+		if s.QualifiedName == qname && s.Kind == kind {
+			return
+		}
+	}
+	names := make([]string, len(symbols))
+	for i, s := range symbols {
+		names[i] = s.QualifiedName + " (" + s.Kind + ")"
+	}
+	t.Errorf("missing symbol %s (%s); have: %v", qname, kind, names)
+}
+
+func filterRefs(refs []parser.RawReference, refType string) []parser.RawReference {
+	var out []parser.RawReference
+	for _, r := range refs {
+		if r.ReferenceType == refType {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func assertRefTarget(t *testing.T, refs []parser.RawReference, target string) {
+	t.Helper()
+	for _, r := range refs {
+		if r.ToName == target || r.ToQualified == target {
+			return
+		}
+	}
+	names := make([]string, len(refs))
+	for i, r := range refs {
+		names[i] = r.ToName
+	}
+	t.Errorf("missing ref target %s; have: %v", target, names)
+}

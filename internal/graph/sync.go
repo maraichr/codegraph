@@ -40,11 +40,11 @@ func (c *Client) SyncSymbols(ctx context.Context, projectID uuid.UUID, symbols [
 		_, err := neo4j.ExecuteWrite(ctx, session, func(tx neo4j.ManagedTransaction) (any, error) {
 			_, err := tx.Run(ctx, UpsertSymbolNode, map[string]any{"symbols": params})
 			if err != nil {
-				return nil, err
+				return struct{}{}, err
 			}
 			// Also link symbols to files
 			_, err = tx.Run(ctx, LinkSymbolToFile, map[string]any{"symbols": params})
-			return nil, err
+			return struct{}{}, err
 		})
 		if err != nil {
 			return fmt.Errorf("sync symbols batch %d: %w", i/batchSize, err)
@@ -74,7 +74,7 @@ func (c *Client) SyncEdges(ctx context.Context, projectID uuid.UUID, edges []pos
 
 		_, err := neo4j.ExecuteWrite(ctx, session, func(tx neo4j.ManagedTransaction) (any, error) {
 			_, err := tx.Run(ctx, UpsertEdge, map[string]any{"edges": params})
-			return nil, err
+			return struct{}{}, err
 		})
 		if err != nil {
 			return fmt.Errorf("sync edges batch %d: %w", i/batchSize, err)
@@ -105,7 +105,7 @@ func (c *Client) SyncFiles(ctx context.Context, projectID uuid.UUID, files []pos
 
 		_, err := neo4j.ExecuteWrite(ctx, session, func(tx neo4j.ManagedTransaction) (any, error) {
 			_, err := tx.Run(ctx, UpsertFileNode, map[string]any{"files": params})
-			return nil, err
+			return struct{}{}, err
 		})
 		if err != nil {
 			return fmt.Errorf("sync files batch %d: %w", i/batchSize, err)
@@ -155,7 +155,7 @@ func (c *Client) SyncColumnEdges(ctx context.Context, projectID uuid.UUID, edges
 
 		_, err := neo4j.ExecuteWrite(ctx, session, func(tx neo4j.ManagedTransaction) (any, error) {
 			_, err := tx.Run(ctx, UpsertColumnEdge, map[string]any{"edges": params})
-			return nil, err
+			return struct{}{}, err
 		})
 		if err != nil {
 			return fmt.Errorf("sync column edges batch %d: %w", i/batchSize, err)
@@ -173,7 +173,7 @@ func (c *Client) ClearProject(ctx context.Context, projectID uuid.UUID) error {
 		_, err := tx.Run(ctx, DeleteProjectNodes, map[string]any{
 			"projectId": projectID.String(),
 		})
-		return nil, err
+		return struct{}{}, err
 	})
 	return err
 }

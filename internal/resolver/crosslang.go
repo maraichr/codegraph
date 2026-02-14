@@ -32,11 +32,15 @@ func NewCrossLangResolver(logger *slog.Logger) *CrossLangResolver {
 // RegisterDefaultRules sets up the default cross-language bridge rules.
 func (c *CrossLangResolver) RegisterDefaultRules() {
 	c.rules = []BridgeRule{
-		// App → SQL: Delphi/ASP/Java referencing SQL objects
+		// App → SQL: Delphi/ASP/Java/C# referencing SQL objects
 		{SourceLanguage: "delphi", TargetLanguage: "tsql", MatchStrategy: "schema_qualified"},
 		{SourceLanguage: "asp", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
 		{SourceLanguage: "java", TargetLanguage: "pgsql", MatchStrategy: "case_insensitive"},
 		{SourceLanguage: "java", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
+		{SourceLanguage: "csharp", TargetLanguage: "tsql", MatchStrategy: "schema_qualified"},
+		{SourceLanguage: "csharp", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
+		{SourceLanguage: "javascript", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
+		{SourceLanguage: "typescript", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
 
 		// Delphi T-prefix: strip T from class names when matching SQL objects
 		{SourceLanguage: "delphi", TargetLanguage: "tsql", MatchStrategy: "strip_prefix"},

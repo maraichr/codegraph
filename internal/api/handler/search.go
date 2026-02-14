@@ -17,10 +17,10 @@ import (
 type SearchHandler struct {
 	logger *slog.Logger
 	store  *store.Store
-	embed  *embedding.Client
+	embed  embedding.Embedder
 }
 
-func NewSearchHandler(logger *slog.Logger, s *store.Store, embed *embedding.Client) *SearchHandler {
+func NewSearchHandler(logger *slog.Logger, s *store.Store, embed embedding.Embedder) *SearchHandler {
 	return &SearchHandler{logger: logger, store: s, embed: embed}
 }
 

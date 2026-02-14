@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/codegraph-labs/codegraph/internal/analytics"
 	"github.com/codegraph-labs/codegraph/internal/config"
 	"github.com/codegraph-labs/codegraph/internal/embedding"
 	"github.com/codegraph-labs/codegraph/internal/graph"
@@ -16,7 +18,9 @@ import (
 	"github.com/codegraph-labs/codegraph/internal/parser"
 	"github.com/codegraph-labs/codegraph/internal/parser/asp"
 	"github.com/codegraph-labs/codegraph/internal/parser/delphi"
+	csharpp "github.com/codegraph-labs/codegraph/internal/parser/csharp"
 	javap "github.com/codegraph-labs/codegraph/internal/parser/java"
+	jsts "github.com/codegraph-labs/codegraph/internal/parser/javascript"
 	"github.com/codegraph-labs/codegraph/internal/parser/pgsql"
 	"github.com/codegraph-labs/codegraph/internal/parser/tsql"
 	"github.com/codegraph-labs/codegraph/internal/resolver"
@@ -94,25 +98,38 @@ func main() {
 
 	// Parser registry
 	registry := parser.NewRegistry()
-	registry.Register(".sql", parser.NewSQLRouter(tsql.New(), pgsql.New()))
-	registry.Register(".asp", asp.New())
+	sqlRouter := parser.NewSQLRouter(tsql.New(), pgsql.New())
+	registry.Register(".sql", sqlRouter)
+	registry.Register(".sqldataprovider", sqlRouter)
+	aspParser := asp.New()
+	registry.Register(".asp", aspParser)
+	registry.Register(".aspx", aspParser)
+	registry.Register(".ascx", aspParser)
+	registry.Register(".ashx", aspParser)
+	registry.Register(".master", aspParser)
 	delphiParser := delphi.New()
 	registry.Register(".pas", delphiParser)
 	registry.Register(".dfm", delphiParser)
 	registry.Register(".dpr", delphiParser)
 	registry.Register(".java", javap.New())
+	registry.Register(".cs", csharpp.New())
+	jsParser := jsts.NewJS()
+	registry.Register(".js", jsParser)
+	registry.Register(".jsx", jsParser)
+	registry.Register(".mjs", jsParser)
+	tsParser := jsts.NewTS()
+	registry.Register(".ts", tsParser)
+	registry.Register(".tsx", tsParser)
 
-	// Bedrock embeddings (optional — skip if no region configured)
+	// Embeddings (auto-selects: OpenRouter > Bedrock > disabled)
 	var embedStage ingestion.Stage
-	if cfg.Bedrock.Region != "" {
-		embedClient, err := embedding.NewClient(cfg.Bedrock)
-		if err != nil {
-			logger.Warn("bedrock client init failed, embedding stage disabled", slog.String("error", err.Error()))
-			embedStage = ingestion.NewNoOpStage("embed")
-		} else {
-			embedStage = ingestion.NewEmbedStage(embedClient, s, logger)
-			logger.Info("bedrock embeddings enabled", slog.String("model", cfg.Bedrock.ModelID))
-		}
+	embedder, err := embedding.NewEmbedder(cfg)
+	if err != nil {
+		logger.Warn("embedder init failed, embedding stage disabled", slog.String("error", err.Error()))
+		embedStage = ingestion.NewNoOpStage("embed")
+	} else if embedder != nil {
+		embedStage = ingestion.NewEmbedStage(embedder, s, logger)
+		logger.Info("embeddings enabled", slog.String("provider", fmt.Sprintf("%T", embedder)), slog.String("model", embedder.ModelID()))
 	} else {
 		embedStage = ingestion.NewNoOpStage("embed")
 	}
@@ -123,6 +140,9 @@ func main() {
 	// Lineage engine
 	lineageEngine := lineage.NewEngine(s, graphClient, logger)
 
+	// Analytics engine (degree, PageRank, layers, summaries, bridges)
+	analyticsEngine := analytics.NewEngine(s, logger)
+
 	// Pipeline stages
 	stages := []ingestion.Stage{
 		ingestion.NewCloneStage(s, zipConn, gitConn, s3Conn),
@@ -131,6 +151,7 @@ func main() {
 		ingestion.NewLineageStage(lineageEngine, logger),
 		ingestion.NewGraphStage(s, graphClient, logger),
 		embedStage,
+		ingestion.NewAnalyticsStage(analyticsEngine, logger),
 	}
 
 	pipeline := ingestion.NewPipeline(s, stages, logger)
