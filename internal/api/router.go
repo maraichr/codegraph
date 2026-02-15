@@ -10,16 +10,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
-	apihandler "github.com/codegraph-labs/codegraph/internal/api/handler"
-	"github.com/codegraph-labs/codegraph/internal/api/graphql"
-	apimw "github.com/codegraph-labs/codegraph/internal/api/middleware"
-	"github.com/codegraph-labs/codegraph/internal/embedding"
-	"github.com/codegraph-labs/codegraph/internal/graph"
-	"github.com/codegraph-labs/codegraph/internal/impact"
-	"github.com/codegraph-labs/codegraph/internal/ingestion"
-	"github.com/codegraph-labs/codegraph/internal/lineage"
-	minioclient "github.com/codegraph-labs/codegraph/internal/store/minio"
-	"github.com/codegraph-labs/codegraph/internal/store"
+	apihandler "github.com/maraichr/codegraph/internal/api/handler"
+	"github.com/maraichr/codegraph/internal/api/graphql"
+	apimw "github.com/maraichr/codegraph/internal/api/middleware"
+	"github.com/maraichr/codegraph/internal/embedding"
+	"github.com/maraichr/codegraph/internal/graph"
+	"github.com/maraichr/codegraph/internal/impact"
+	"github.com/maraichr/codegraph/internal/ingestion"
+	"github.com/maraichr/codegraph/internal/lineage"
+	minioclient "github.com/maraichr/codegraph/internal/store/minio"
+	"github.com/maraichr/codegraph/internal/store"
 )
 
 // RouterDeps holds optional dependencies for the router.

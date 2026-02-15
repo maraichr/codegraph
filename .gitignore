@@ -37,12 +37,6 @@ frontend/.vite/
 # Docker volumes
 .docker-data/
 
-# Generated
-internal/api/graphql/generated.go
-internal/store/postgres/db.go
-internal/store/postgres/models.go
-internal/store/postgres/queries/*.sql.go
-
 # Secrets
 *.pem
 *.key

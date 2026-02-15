@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/codegraph-labs/codegraph/internal/config"
+	"github.com/maraichr/codegraph/internal/config"
 )
 
 const (

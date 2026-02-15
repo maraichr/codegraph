@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/impact"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	"github.com/codegraph-labs/codegraph/pkg/models"
+	"github.com/maraichr/codegraph/internal/impact"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/pkg/models"
 )
 
 func dbProjectToGQL(p postgres.Project) *Project {

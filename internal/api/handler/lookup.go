@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	"github.com/codegraph-labs/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/pkg/apierr"
 )
 
 // getProjectOr404 fetches a project by slug and writes a 404/500 error on failure.

@@ -5,15 +5,16 @@ import (
 	"crypto/subtle"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/codegraph-labs/codegraph/internal/ingestion"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	"github.com/codegraph-labs/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/internal/ingestion"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/pkg/apierr"
 )
 
 type WebhookHandler struct {
@@ -46,9 +47,10 @@ func (h *WebhookHandler) GitLabPush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate webhook secret - for Phase 1, we use a static env var
-	// In production this would be per-source from encrypted config
-	expectedToken := "codegraph-webhook-secret" // TODO: read from source config or env
+	expectedToken := os.Getenv("WEBHOOK_SECRET")
+	if expectedToken == "" {
+		expectedToken = "codegraph-webhook-secret"
+	}
 	if subtle.ConstantTimeCompare([]byte(token), []byte(expectedToken)) != 1 {
 		writeAPIError(w, h.logger, apierr.InvalidAuthToken())
 		return

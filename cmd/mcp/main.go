@@ -7,12 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/codegraph-labs/codegraph/internal/config"
-	"github.com/codegraph-labs/codegraph/internal/mcp"
-	"github.com/codegraph-labs/codegraph/internal/mcp/tools"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	vk "github.com/codegraph-labs/codegraph/internal/store/valkey"
+	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/codegraph/internal/mcp"
+	"github.com/maraichr/codegraph/internal/mcp/tools"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	vk "github.com/maraichr/codegraph/internal/store/valkey"
 )
 
 func main() {

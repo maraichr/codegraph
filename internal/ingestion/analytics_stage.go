@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/codegraph-labs/codegraph/internal/analytics"
+	"github.com/maraichr/codegraph/internal/analytics"
 )
 
 // AnalyticsStage computes graph analytics after embedding.

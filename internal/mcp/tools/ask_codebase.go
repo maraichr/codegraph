@@ -6,19 +6,21 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/mcp"
-	"github.com/codegraph-labs/codegraph/internal/mcp/session"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/mcp"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 // AskCodebaseParams are the parameters for the ask_codebase meta-tool.
 type AskCodebaseParams struct {
-	Project           string `json:"project"`
-	Question          string `json:"question"`
-	MaxResponseTokens int    `json:"max_response_tokens,omitempty"`
-	SessionID         string `json:"session_id,omitempty"`
-	Verbosity         string `json:"verbosity,omitempty"`
+	Project           string   `json:"project"`
+	Question          string   `json:"question"`
+	Kinds             []string `json:"kinds,omitempty"`
+	Languages         []string `json:"languages,omitempty"`
+	MaxResponseTokens int      `json:"max_response_tokens,omitempty"`
+	SessionID         string   `json:"session_id,omitempty"`
+	Verbosity         string   `json:"verbosity,omitempty"`
 }
 
 // AskCodebaseHandler routes natural language questions to appropriate tool chains.
@@ -43,12 +45,14 @@ func NewAskCodebaseHandler(s *store.Store, sm *session.Manager, logger *slog.Log
 type Intent string
 
 const (
-	IntentSearch    Intent = "search"
-	IntentImpact    Intent = "impact"
-	IntentLineage   Intent = "lineage"
-	IntentOverview  Intent = "overview"
-	IntentSubgraph  Intent = "subgraph"
-	IntentDeps      Intent = "dependencies"
+	IntentSearch        Intent = "search"
+	IntentImpact        Intent = "impact"
+	IntentLineage       Intent = "lineage"
+	IntentOverview      Intent = "overview"
+	IntentSubgraph      Intent = "subgraph"
+	IntentDeps          Intent = "dependencies"
+	IntentRanking       Intent = "ranking"
+	IntentRelationships Intent = "relationships"
 )
 
 // Handle classifies the question intent and routes to the appropriate tool chain.
@@ -65,6 +69,8 @@ func (h *AskCodebaseHandler) Handle(ctx context.Context, params AskCodebaseParam
 	switch intent {
 	case IntentOverview:
 		return h.handleOverview(ctx, params)
+	case IntentRanking:
+		return h.handleRanking(ctx, params)
 	case IntentImpact:
 		return h.handleImpact(ctx, params)
 	case IntentLineage:
@@ -73,6 +79,8 @@ func (h *AskCodebaseHandler) Handle(ctx context.Context, params AskCodebaseParam
 		return h.handleSubgraph(ctx, params)
 	case IntentDeps:
 		return h.handleDependencies(ctx, params)
+	case IntentRelationships:
+		return h.handleRelationships(ctx, params)
 	default:
 		return h.handleSearch(ctx, params)
 	}
@@ -80,6 +88,18 @@ func (h *AskCodebaseHandler) Handle(ctx context.Context, params AskCodebaseParam
 
 func classifyIntent(question string) Intent {
 	q := strings.ToLower(question)
+
+	// Ranking patterns (check early — "most used", "top", "busiest", "most important")
+	rankingPatterns := []string{
+		"most used", "most important", "most referenced", "most connected",
+		"top ", "busiest", "highest", "largest", "most common",
+		"most frequent", "most popular", "heavily used",
+	}
+	for _, p := range rankingPatterns {
+		if strings.Contains(q, p) {
+			return IntentRanking
+		}
+	}
 
 	// Impact patterns
 	impactPatterns := []string{
@@ -111,6 +131,18 @@ func classifyIntent(question string) Intent {
 	for _, p := range overviewPatterns {
 		if strings.Contains(q, p) {
 			return IntentOverview
+		}
+	}
+
+	// Relationship / FK patterns
+	relPatterns := []string{
+		"foreign key", "foreign keys", "relationship", "relationships",
+		"related to", "joins", "references between", "missing fk",
+		"data access pattern",
+	}
+	for _, p := range relPatterns {
+		if strings.Contains(q, p) {
+			return IntentRelationships
 		}
 	}
 
@@ -192,6 +224,59 @@ func (h *AskCodebaseHandler) handleOverview(ctx context.Context, params AskCodeb
 	return rb.FinalizeWithHints(1, 1, hints), nil
 }
 
+func (h *AskCodebaseHandler) handleRanking(ctx context.Context, params AskCodebaseParams) (string, error) {
+	project, err := h.store.GetProject(ctx, params.Project)
+	if err != nil {
+		return "", fmt.Errorf("get project: %w", err)
+	}
+
+	// Extract kinds from the question if not explicitly provided
+	kinds := params.Kinds
+	if len(kinds) == 0 {
+		kinds = extractKindsFromQuestion(params.Question)
+	}
+
+	results, err := h.store.ListTopSymbolsByKind(ctx, postgres.ListTopSymbolsByKindParams{
+		ProjectSlug: project.Slug,
+		Kinds:       kinds,
+		Languages:   params.Languages,
+		Lim:         10,
+	})
+	if err != nil {
+		return "", fmt.Errorf("list top symbols: %w", err)
+	}
+
+	if len(results) == 0 {
+		return fmt.Sprintf("No symbols found matching the criteria (kinds=%v).", kinds), nil
+	}
+
+	verbosity := mcp.ParseVerbosity(params.Verbosity)
+	rb := mcp.NewResponseBuilder(params.MaxResponseTokens)
+
+	kindLabel := "symbols"
+	if len(kinds) > 0 {
+		kindLabel = strings.Join(kinds, "/") + "s"
+	}
+	rb.AddHeader(fmt.Sprintf("**Top %s by usage (in-degree)**", kindLabel))
+
+	var sess *session.Session
+	if h.session != nil && params.SessionID != "" {
+		sess, _ = h.session.Load(ctx, params.SessionID)
+	}
+
+	returned := 0
+	for _, sym := range results {
+		if !rb.AddSymbolCard(sym, verbosity, sess) {
+			break
+		}
+		returned++
+	}
+
+	nav := mcp.NewNavigator(h.store.Queries)
+	hints := nav.SuggestNextSteps("search_symbols", results, sess)
+	return rb.FinalizeWithHints(len(results), returned, hints), nil
+}
+
 func (h *AskCodebaseHandler) handleSearch(ctx context.Context, params AskCodebaseParams) (string, error) {
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
@@ -199,11 +284,15 @@ func (h *AskCodebaseHandler) handleSearch(ctx context.Context, params AskCodebas
 	}
 
 	searchTerms := extractSearchTerms(params.Question)
+	kinds := params.Kinds
+	if kinds == nil {
+		kinds = []string{}
+	}
 	results, err := h.store.SearchSymbols(ctx, postgres.SearchSymbolsParams{
 		ProjectSlug: project.Slug,
 		Query:       &searchTerms,
-		Kinds:       []string{},
-		Languages:   []string{},
+		Kinds:       kinds,
+		Languages:   params.Languages,
 		Lim:         20,
 	})
 	if err != nil {
@@ -265,8 +354,61 @@ func (h *AskCodebaseHandler) handleSubgraph(ctx context.Context, params AskCodeb
 	})
 }
 
+func (h *AskCodebaseHandler) handleRelationships(ctx context.Context, params AskCodebaseParams) (string, error) {
+	// Use extract_subgraph with kinds=["table"] to get all tables and their edges in one shot
+	kinds := params.Kinds
+	if len(kinds) == 0 {
+		kinds = extractKindsFromQuestion(params.Question)
+	}
+	if len(kinds) == 0 {
+		kinds = []string{"table"}
+	}
+	return h.subgraph.Handle(ctx, ExtractSubgraphParams{
+		Project:           params.Project,
+		Kinds:             kinds,
+		MaxDepth:          1,
+		MaxNodes:          100,
+		MaxResponseTokens: params.MaxResponseTokens,
+		SessionID:         params.SessionID,
+		Verbosity:         "summary",
+	})
+}
+
 func (h *AskCodebaseHandler) handleDependencies(ctx context.Context, params AskCodebaseParams) (string, error) {
 	return h.handleSearch(ctx, params)
+}
+
+// extractKindsFromQuestion infers symbol kinds from natural language question text.
+func extractKindsFromQuestion(question string) []string {
+	q := strings.ToLower(question)
+	kindMap := map[string]string{
+		"table":     "table",
+		"tables":    "table",
+		"procedure": "procedure",
+		"proc":      "procedure",
+		"procs":     "procedure",
+		"class":     "class",
+		"classes":   "class",
+		"method":    "method",
+		"methods":   "method",
+		"function":  "function",
+		"functions": "function",
+		"column":    "column",
+		"columns":   "column",
+		"interface": "interface",
+		"field":     "field",
+		"property":  "property",
+		"enum":      "enum",
+	}
+	seen := make(map[string]bool)
+	var kinds []string
+	for word, kind := range kindMap {
+		if strings.Contains(q, word) && !seen[kind] {
+			seen[kind] = true
+			kinds = append(kinds, kind)
+		}
+	}
+	return kinds
 }
 
 // extractSearchTerms removes common question words to get the core search terms.

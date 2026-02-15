@@ -3,7 +3,7 @@ package tsql
 import (
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // Parser implements a recursive-descent T-SQL parser that extracts symbols and references.

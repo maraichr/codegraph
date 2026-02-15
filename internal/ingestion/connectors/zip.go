@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	minioclient "github.com/codegraph-labs/codegraph/internal/store/minio"
+	minioclient "github.com/maraichr/codegraph/internal/store/minio"
 )
 
 // ZipConnector handles ZIP file upload and extraction.

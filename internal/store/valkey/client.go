@@ -6,7 +6,7 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
-	"github.com/codegraph-labs/codegraph/internal/config"
+	"github.com/maraichr/codegraph/internal/config"
 )
 
 func NewClient(cfg config.ValkeyConfig) (valkey.Client, error) {

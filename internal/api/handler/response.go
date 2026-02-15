@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/codegraph-labs/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/pkg/apierr"
 )
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

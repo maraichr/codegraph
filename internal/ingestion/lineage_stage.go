@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/codegraph-labs/codegraph/internal/lineage"
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/lineage"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // LineageStage builds column-level lineage edges from parsed column references.

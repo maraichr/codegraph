@@ -3,7 +3,7 @@ package asp
 import (
 	"testing"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 func TestDirectivesCodeBehind(t *testing.T) {

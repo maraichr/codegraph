@@ -25,6 +25,17 @@ func (q *Queries) CountSymbolsByProject(ctx context.Context, projectID uuid.UUID
 const createSymbol = `-- name: CreateSymbol :one
 INSERT INTO symbols (project_id, file_id, name, qualified_name, kind, language, start_line, end_line, start_col, end_col, signature, doc_comment)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+ON CONFLICT (project_id, qualified_name, kind) DO UPDATE SET
+    file_id = EXCLUDED.file_id,
+    name = EXCLUDED.name,
+    language = EXCLUDED.language,
+    start_line = EXCLUDED.start_line,
+    end_line = EXCLUDED.end_line,
+    start_col = EXCLUDED.start_col,
+    end_col = EXCLUDED.end_col,
+    signature = EXCLUDED.signature,
+    doc_comment = EXCLUDED.doc_comment,
+    updated_at = now()
 RETURNING id, project_id, file_id, name, qualified_name, kind, language, start_line, end_line, start_col, end_col, signature, doc_comment, metadata, created_at, updated_at
 `
 
@@ -340,6 +351,64 @@ SELECT id, project_id, file_id, name, qualified_name, kind, language, start_line
 
 func (q *Queries) ListSymbolsByProject(ctx context.Context, projectID uuid.UUID) ([]Symbol, error) {
 	rows, err := q.db.Query(ctx, listSymbolsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Symbol{}
+	for rows.Next() {
+		var i Symbol
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.FileID,
+			&i.Name,
+			&i.QualifiedName,
+			&i.Kind,
+			&i.Language,
+			&i.StartLine,
+			&i.EndLine,
+			&i.StartCol,
+			&i.EndCol,
+			&i.Signature,
+			&i.DocComment,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTopSymbolsByKind = `-- name: ListTopSymbolsByKind :many
+SELECT id, project_id, file_id, name, qualified_name, kind, language, start_line, end_line, start_col, end_col, signature, doc_comment, metadata, created_at, updated_at FROM symbols
+WHERE project_id = (SELECT id FROM projects WHERE slug = $1)
+  AND (cardinality($2::text[]) = 0 OR kind = ANY($2::text[]))
+  AND (cardinality($3::text[]) = 0 OR language = ANY($3::text[]))
+ORDER BY (COALESCE(metadata->>'in_degree', '0'))::int DESC
+LIMIT $4
+`
+
+type ListTopSymbolsByKindParams struct {
+	ProjectSlug string   `json:"project_slug"`
+	Kinds       []string `json:"kinds"`
+	Languages   []string `json:"languages"`
+	Lim         int32    `json:"lim"`
+}
+
+func (q *Queries) ListTopSymbolsByKind(ctx context.Context, arg ListTopSymbolsByKindParams) ([]Symbol, error) {
+	rows, err := q.db.Query(ctx, listTopSymbolsByKind,
+		arg.ProjectSlug,
+		arg.Kinds,
+		arg.Languages,
+		arg.Lim,
+	)
 	if err != nil {
 		return nil, err
 	}

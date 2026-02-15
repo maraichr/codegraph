@@ -1,6 +1,17 @@
 -- name: CreateSymbol :one
 INSERT INTO symbols (project_id, file_id, name, qualified_name, kind, language, start_line, end_line, start_col, end_col, signature, doc_comment)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+ON CONFLICT (project_id, qualified_name, kind) DO UPDATE SET
+    file_id = EXCLUDED.file_id,
+    name = EXCLUDED.name,
+    language = EXCLUDED.language,
+    start_line = EXCLUDED.start_line,
+    end_line = EXCLUDED.end_line,
+    start_col = EXCLUDED.start_col,
+    end_col = EXCLUDED.end_col,
+    signature = EXCLUDED.signature,
+    doc_comment = EXCLUDED.doc_comment,
+    updated_at = now()
 RETURNING *;
 
 -- name: CountSymbolsByProject :one
@@ -41,3 +52,11 @@ DELETE FROM symbols WHERE file_id = $1;
 
 -- name: ListColumnSymbolsByProject :many
 SELECT * FROM symbols WHERE project_id = $1 AND kind = 'column';
+
+-- name: ListTopSymbolsByKind :many
+SELECT * FROM symbols
+WHERE project_id = (SELECT id FROM projects WHERE slug = @project_slug)
+  AND (cardinality(@kinds::text[]) = 0 OR kind = ANY(@kinds::text[]))
+  AND (cardinality(@languages::text[]) = 0 OR language = ANY(@languages::text[]))
+ORDER BY (COALESCE(metadata->>'in_degree', '0'))::int DESC
+LIMIT @lim;

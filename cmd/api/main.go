@@ -10,17 +10,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/codegraph-labs/codegraph/internal/api"
-	"github.com/codegraph-labs/codegraph/internal/config"
-	"github.com/codegraph-labs/codegraph/internal/embedding"
-	"github.com/codegraph-labs/codegraph/internal/graph"
-	"github.com/codegraph-labs/codegraph/internal/impact"
-	"github.com/codegraph-labs/codegraph/internal/ingestion"
-	"github.com/codegraph-labs/codegraph/internal/lineage"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	minioclient "github.com/codegraph-labs/codegraph/internal/store/minio"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	vk "github.com/codegraph-labs/codegraph/internal/store/valkey"
+	"github.com/maraichr/codegraph/internal/api"
+	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/codegraph/internal/embedding"
+	"github.com/maraichr/codegraph/internal/graph"
+	"github.com/maraichr/codegraph/internal/impact"
+	"github.com/maraichr/codegraph/internal/ingestion"
+	"github.com/maraichr/codegraph/internal/lineage"
+	"github.com/maraichr/codegraph/internal/store"
+	minioclient "github.com/maraichr/codegraph/internal/store/minio"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	vk "github.com/maraichr/codegraph/internal/store/valkey"
 )
 
 func main() {

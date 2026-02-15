@@ -9,16 +9,17 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/mcp"
-	"github.com/codegraph-labs/codegraph/internal/mcp/session"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/mcp"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 // ExtractSubgraphParams are the parameters for the extract_subgraph tool.
 type ExtractSubgraphParams struct {
 	Project           string   `json:"project"`
 	Topic             string   `json:"topic,omitempty"`
+	Kinds             []string `json:"kinds,omitempty"`
 	SeedSymbols       []string `json:"seed_symbols,omitempty"`
 	MaxDepth          int      `json:"max_depth,omitempty"`
 	MaxNodes          int      `json:"max_nodes,omitempty"`
@@ -164,23 +165,45 @@ func (h *ExtractSubgraphHandler) discoverSeeds(ctx context.Context, params Extra
 		return seeds, nil
 	}
 
+	project, err := h.store.GetProject(ctx, params.Project)
+	if err != nil {
+		return nil, fmt.Errorf("get project: %w", err)
+	}
+
 	// Fall back to text search for the topic
 	if params.Topic != "" {
-		project, err := h.store.GetProject(ctx, params.Project)
-		if err != nil {
-			return nil, fmt.Errorf("get project: %w", err)
-		}
-
 		topic := params.Topic
+		kinds := params.Kinds
+		if kinds == nil {
+			kinds = []string{}
+		}
 		results, err := h.store.SearchSymbols(ctx, postgres.SearchSymbolsParams{
 			ProjectSlug: project.Slug,
 			Query:       &topic,
-			Kinds:       []string{},
+			Kinds:       kinds,
 			Languages:   []string{},
 			Lim:         5,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("search symbols: %w", err)
+		}
+		seeds = results
+	}
+
+	// If no topic but kinds specified, use top symbols by kind as seeds
+	if len(seeds) == 0 && len(params.Kinds) > 0 {
+		limit := int32(params.MaxNodes)
+		if limit <= 0 {
+			limit = 50
+		}
+		results, err := h.store.ListTopSymbolsByKind(ctx, postgres.ListTopSymbolsByKindParams{
+			ProjectSlug: project.Slug,
+			Kinds:       params.Kinds,
+			Languages:   []string{},
+			Lim:         limit,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list top symbols by kind: %w", err)
 		}
 		seeds = results
 	}
