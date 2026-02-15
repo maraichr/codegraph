@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/lattice/internal/parser"
 )
 
 // Parser implements a parser for Delphi/Object Pascal files.

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	minioclient "github.com/maraichr/codegraph/internal/store/minio"
+	minioclient "github.com/maraichr/lattice/internal/store/minio"
 )
 
 // ZipConnector handles ZIP file upload and extraction.
@@ -35,7 +35,7 @@ func (z *ZipConnector) Extract(ctx context.Context, objectName, destDir string) 
 	defer reader.Close()
 
 	// Write to temp file for zip.OpenReader
-	tmpFile, err := os.CreateTemp("", "codegraph-zip-*.zip")
+	tmpFile, err := os.CreateTemp("", "lattice-zip-*.zip")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}

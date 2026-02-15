@@ -7,7 +7,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 // ErrorPresenter returns a gqlgen ErrorPresenterFunc that puts apierr codes

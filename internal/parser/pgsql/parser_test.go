@@ -3,7 +3,7 @@ package pgsql
 import (
 	"testing"
 
-	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/lattice/internal/parser"
 )
 
 func TestParseCreateTable(t *testing.T) {

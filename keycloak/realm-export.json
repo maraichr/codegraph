@@ -1,38 +1,38 @@
 {
-  "realm": "codegraph",
+  "realm": "lattice",
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
-  "loginTheme": "codegraph",
+  "loginTheme": "lattice",
   "roles": {
     "realm": [
       {
-        "name": "codegraph_admin",
-        "description": "Full admin access to CodeGraph"
+        "name": "lattice_admin",
+        "description": "Full admin access to Lattice"
       },
       {
-        "name": "codegraph_reader",
-        "description": "Read-only access to CodeGraph"
+        "name": "lattice_reader",
+        "description": "Read-only access to Lattice"
       },
       {
-        "name": "codegraph_ingestor",
-        "description": "Ingest/index access to CodeGraph"
+        "name": "lattice_ingestor",
+        "description": "Ingest/index access to Lattice"
       }
     ]
   },
   "clients": [
     {
-      "clientId": "codegraph",
-      "name": "CodeGraph API (Confidential)",
+      "clientId": "lattice",
+      "name": "Lattice API (Confidential)",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "codegraph-secret",
+      "secret": "lattice-secret",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
-      "defaultClientScopes": ["codegraph-scopes"],
+      "defaultClientScopes": ["lattice-scopes"],
       "protocolMappers": [
         {
           "name": "tenant_id",
@@ -50,8 +50,8 @@
       ]
     },
     {
-      "clientId": "codegraph-public",
-      "name": "CodeGraph Frontend (Public PKCE)",
+      "clientId": "lattice-public",
+      "name": "Lattice Frontend (Public PKCE)",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
@@ -59,7 +59,37 @@
       "redirectUris": ["http://localhost:5173/*", "http://localhost:8080/*", "http://localhost:3000/*"],
       "webOrigins": ["http://localhost:5173", "http://localhost:8080", "http://localhost:3000"],
       "protocol": "openid-connect",
-      "defaultClientScopes": ["codegraph-scopes"],
+      "defaultClientScopes": ["lattice-scopes"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "lattice-mcp",
+      "name": "Lattice MCP (Claude Desktop)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost/*", "http://127.0.0.1/*"],
+      "webOrigins": ["http://localhost", "http://127.0.0.1"],
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["lattice-scopes"],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -82,8 +112,8 @@
   ],
   "clientScopes": [
     {
-      "name": "codegraph-scopes",
-      "description": "CodeGraph API scopes",
+      "name": "lattice-scopes",
+      "description": "Lattice API scopes",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
@@ -95,18 +125,18 @@
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "config": {
-            "included.client.audience": "codegraph",
+            "included.client.audience": "lattice",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
         },
         {
-          "name": "codegraph-scopes-claim",
+          "name": "lattice-scopes-claim",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-hardcoded-claim-mapper",
           "config": {
-            "claim.name": "codegraph_scopes",
-            "claim.value": "codegraph:read codegraph:write codegraph:ingest",
+            "claim.name": "lattice_scopes",
+            "claim.value": "lattice:read lattice:write lattice:ingest",
             "jsonType.label": "String",
             "id.token.claim": "true",
             "access.token.claim": "true",
@@ -133,7 +163,7 @@
     {
       "username": "testuser",
       "enabled": true,
-      "email": "testuser@codegraph.dev",
+      "email": "testuser@latticegraph.dev",
       "firstName": "Test",
       "lastName": "User",
       "credentials": [
@@ -143,7 +173,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["codegraph_admin", "codegraph_reader", "codegraph_ingestor"],
+      "realmRoles": ["lattice_admin", "lattice_reader", "lattice_ingestor"],
       "attributes": {
         "tenant_id": ["00000000-0000-0000-0000-000000000099"]
       }

@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	appconfig "github.com/maraichr/codegraph/internal/config"
+	appconfig "github.com/maraichr/lattice/internal/config"
 )
 
 // S3Connector downloads files from an S3-compatible bucket.

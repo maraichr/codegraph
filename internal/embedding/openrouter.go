@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/lattice/internal/config"
 )
 
 const (

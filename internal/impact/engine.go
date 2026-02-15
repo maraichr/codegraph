@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/maraichr/codegraph/internal/graph"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/graph"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 // SymbolSummary is a lightweight representation of a symbol for impact results.

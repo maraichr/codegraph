@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/parser"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/parser"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // ParseStage walks the work directory, parses SQL files, and persists results.

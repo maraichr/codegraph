@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/lattice/internal/parser"
 )
 
 // BridgeRule defines how to resolve references between different languages.

@@ -5,8 +5,9 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
-	"github.com/maraichr/codegraph/internal/mcp/session"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/mcp/session"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 // Server implements the MCP (Model Context Protocol) server
@@ -14,6 +15,7 @@ import (
 type Server struct {
 	Store    *store.Store
 	Session  *session.Manager
+	Embedder embedding.Embedder
 	Nav      *Navigator
 	Logger   *slog.Logger
 }
@@ -22,6 +24,7 @@ type Server struct {
 type ServerDeps struct {
 	Store        *store.Store
 	ValkeyClient valkey.Client
+	Embedder     embedding.Embedder
 	Logger       *slog.Logger
 }
 
@@ -35,9 +38,10 @@ func NewServer(deps ServerDeps) *Server {
 	nav := NewNavigator(deps.Store.Queries)
 
 	return &Server{
-		Store:   deps.Store,
-		Session: sm,
-		Nav:     nav,
-		Logger:  deps.Logger,
+		Store:    deps.Store,
+		Session:  sm,
+		Embedder: deps.Embedder,
+		Nav:      nav,
+		Logger:   deps.Logger,
 	}
 }

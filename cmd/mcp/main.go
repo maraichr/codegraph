@@ -9,15 +9,18 @@ import (
 	"syscall"
 	"time"
 
+	sdkauth "github.com/modelcontextprotocol/go-sdk/auth"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
-	"github.com/maraichr/codegraph/internal/auth"
-	"github.com/maraichr/codegraph/internal/config"
-	"github.com/maraichr/codegraph/internal/mcp"
-	"github.com/maraichr/codegraph/internal/mcp/tools"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
-	vk "github.com/maraichr/codegraph/internal/store/valkey"
+	"github.com/maraichr/lattice/internal/auth"
+	"github.com/maraichr/lattice/internal/config"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/mcp"
+	"github.com/maraichr/lattice/internal/mcp/tools"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
+	vk "github.com/maraichr/lattice/internal/store/valkey"
 )
 
 func main() {
@@ -54,62 +57,88 @@ func main() {
 		logger.Info("connected to valkey")
 	}
 
+	// Embedder (optional for semantic search)
+	embedder, err := embedding.NewEmbedder(cfg)
+	if err != nil {
+		logger.Warn("embedder unavailable, semantic search disabled", slog.String("error", err.Error()))
+	} else if embedder != nil {
+		logger.Info("embedder configured", slog.String("model", embedder.ModelID()))
+	}
+
 	// Create MCP server with infrastructure
 	mcpServer := mcp.NewServer(mcp.ServerDeps{
 		Store:        s,
 		ValkeyClient: vkClient,
+		Embedder:     embedder,
 		Logger:       logger,
 	})
 
 	// Wire tool handlers (in cmd to avoid import cycle mcp <-> mcp/tools)
-	extractSubgraph := tools.NewExtractSubgraphHandler(s, mcpServer.Session, logger)
-	askCodebase := tools.NewAskCodebaseHandler(s, mcpServer.Session, logger)
+	extractSubgraph := tools.NewExtractSubgraphHandler(s, mcpServer.Session, embedder, logger)
+	askCodebase := tools.NewAskCodebaseHandler(s, mcpServer.Session, embedder, logger)
+	listProjects := tools.NewListProjectsHandler(s, logger)
+	searchSymbols := tools.NewSearchSymbolsHandler(s, mcpServer.Session, logger)
+	getLineage := tools.NewGetLineageHandler(s, logger)
+	analyzeImpact := tools.NewAnalyzeImpactHandler(s, logger)
+	getProjectAnalytics := tools.NewGetProjectAnalyticsHandler(s, logger)
+	semanticSearch := tools.NewSemanticSearchHandler(s, embedder, logger)
 
-	// SDK MCP server and Streamable HTTP transport (only extract_subgraph and ask_codebase
-	// are registered; other spec tools are used internally by ask_codebase or are future work).
-	sdkServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "codegraph", Version: "1.0.0"}, nil)
+	// SDK MCP server
+	sdkServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "lattice", Version: "1.0.0"}, nil)
 
+	// Register all tools using WrapHandler
 	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
 		Name:        "extract_subgraph",
 		Description: "Extract a subgraph of symbols and relationships around a topic or set of seed symbols. Returns symbol cards with metadata, edges, and navigation hints.",
-	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, params *tools.ExtractSubgraphParams) (*sdkmcp.CallToolResult, any, error) {
-		if params == nil {
-			params = &tools.ExtractSubgraphParams{}
-		}
-		result, err := extractSubgraph.Handle(ctx, *params)
-		if err != nil {
-			return &sdkmcp.CallToolResult{
-				IsError: true,
-				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: err.Error()}},
-			}, nil, nil
-		}
-		return &sdkmcp.CallToolResult{
-			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: result}},
-		}, nil, nil
-	})
+	}, tools.WrapHandler[tools.ExtractSubgraphParams](extractSubgraph))
 
 	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
 		Name:        "ask_codebase",
 		Description: "Ask a natural language question about the codebase. Routes to overview, search, ranking, impact analysis, lineage tracing, or subgraph exploration.",
-	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, params *tools.AskCodebaseParams) (*sdkmcp.CallToolResult, any, error) {
-		if params == nil {
-			params = &tools.AskCodebaseParams{}
-		}
-		result, err := askCodebase.Handle(ctx, *params)
-		if err != nil {
-			return &sdkmcp.CallToolResult{
-				IsError: true,
-				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: err.Error()}},
-			}, nil, nil
-		}
-		return &sdkmcp.CallToolResult{
-			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: result}},
-		}, nil, nil
-	})
+	}, tools.WrapHandler[tools.AskCodebaseParams](askCodebase))
 
-	sdkHandler := sdkmcp.NewStreamableHTTPHandler(func(*http.Request) *sdkmcp.Server { return sdkServer }, nil)
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "list_projects",
+		Description: "List all projects accessible to the authenticated user. Returns project slug, name, and description.",
+	}, tools.WrapHandler[tools.ListProjectsParams](listProjects))
 
-	// Wrap with auth middleware
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "search_symbols",
+		Description: "Search for symbols (tables, procedures, classes, functions, etc.) by name or keyword within a project. Supports filtering by kind and language.",
+	}, tools.WrapHandler[tools.SearchSymbolsParams](searchSymbols))
+
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "get_lineage",
+		Description: "Trace the upstream (data sources, callers) or downstream (consumers, dependents) lineage of a symbol. Useful for understanding data flow and call chains.",
+	}, tools.WrapHandler[tools.GetLineageParams](getLineage))
+
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "analyze_impact",
+		Description: "Analyze the blast radius of modifying, deleting, or renaming a symbol. Shows direct and transitive impacts with severity classification.",
+	}, tools.WrapHandler[tools.AnalyzeImpactParams](analyzeImpact))
+
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "get_project_analytics",
+		Description: "Get project-level analytics: summary stats, language distribution, symbol kind counts, architectural layer distribution, or cross-language bridges.",
+	}, tools.WrapHandler[tools.GetProjectAnalyticsParams](getProjectAnalytics))
+
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "semantic_search",
+		Description: "Search symbols using natural language via vector embeddings. Finds conceptually similar symbols even without exact name matches. Requires embedding provider to be configured.",
+	}, tools.WrapHandler[tools.SemanticSearchParams](semanticSearch))
+
+	// Use Stateless mode so that stale session IDs from server restarts (hot-reload)
+	// are ignored rather than returning 404. Each request gets a pre-initialized
+	// temporary session. App-level sessions use Valkey via the session_id tool param.
+	sdkHandler := sdkmcp.NewStreamableHTTPHandler(
+		func(*http.Request) *sdkmcp.Server { return sdkServer },
+		&sdkmcp.StreamableHTTPOptions{Stateless: true},
+	)
+
+	// HTTP mux for multiple endpoints
+	mux := http.NewServeMux()
+
+	// Wrap MCP handler with auth middleware
 	var mcpHandler http.Handler = sdkHandler
 	if cfg.Auth.Enabled {
 		if cfg.Auth.IssuerURL == "" {
@@ -121,13 +150,44 @@ func main() {
 			logger.Error("failed to init OIDC verifier for MCP", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
-		mcpHandler = auth.RequireAuth(verifier, logger)(sdkHandler)
+
+		// SDK auth middleware with RFC 9728 support
+		resourceMetadataURL := ""
+		if cfg.MCP.BaseURL != "" {
+			resourceMetadataURL = cfg.MCP.BaseURL + "/.well-known/oauth-protected-resource"
+
+			// Determine the Keycloak authorization server URL
+			authServerURL := cfg.Auth.PublicIssuer
+			if authServerURL == "" {
+				authServerURL = cfg.Auth.IssuerURL
+			}
+
+			// Serve RFC 9728 Protected Resource Metadata
+			prm := &oauthex.ProtectedResourceMetadata{
+				Resource:             cfg.MCP.BaseURL,
+				AuthorizationServers: []string{authServerURL},
+				ScopesSupported:      []string{"openid", "lattice:read", "lattice:write"},
+				BearerMethodsSupported: []string{"header"},
+				ResourceName:         "Lattice MCP Server",
+			}
+			mux.Handle("/.well-known/oauth-protected-resource", sdkauth.ProtectedResourceMetadataHandler(prm))
+			logger.Info("RFC 9728 metadata endpoint enabled", slog.String("url", resourceMetadataURL))
+		}
+
+		mcpVerifier := auth.NewMCPTokenVerifier(verifier)
+		mcpHandler = sdkauth.RequireBearerToken(mcpVerifier, &sdkauth.RequireBearerTokenOptions{
+			ResourceMetadataURL: resourceMetadataURL,
+		})(sdkHandler)
 		logger.Info("MCP OIDC auth enabled", slog.String("issuer", cfg.Auth.IssuerURL))
 	} else {
 		mcpHandler = auth.DevModeMiddleware(logger)(sdkHandler)
 	}
 
-	httpServer := &http.Server{Addr: cfg.MCP.Addr, Handler: mcpHandler}
+	mux.Handle("/mcp", mcpHandler)
+	// Also serve on root for backwards compat
+	mux.Handle("/", mcpHandler)
+
+	httpServer := &http.Server{Addr: cfg.MCP.Addr, Handler: mux}
 
 	go func() {
 		logger.Info("MCP server listening", slog.String("addr", cfg.MCP.Addr))

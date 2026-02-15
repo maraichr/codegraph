@@ -18,9 +18,9 @@ function renderApp(route = "/") {
 }
 
 describe("App", () => {
-  it("renders the sidebar with CodeGraph branding", () => {
+  it("renders the sidebar with Lattice branding", () => {
     renderApp();
-    expect(screen.getByText("CodeGraph")).toBeInTheDocument();
+    expect(screen.getByText("Lattice")).toBeInTheDocument();
   });
 
   it("renders the Projects heading on the home page", () => {

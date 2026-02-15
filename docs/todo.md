@@ -1,4 +1,4 @@
-# CodeGraph todo
+# Lattice todo
 
 ## Indexing improvements (DNN Platform / complex codebases)
 

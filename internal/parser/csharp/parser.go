@@ -7,7 +7,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/csharp"
 
-	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/lattice/internal/parser"
 )
 
 // Parser implements a tree-sitter based C# parser.

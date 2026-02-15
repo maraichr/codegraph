@@ -11,8 +11,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/maraichr/codegraph/internal/mcp/session"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/mcp/session"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 const maxTurns = 15

@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/maraichr/codegraph/internal/parser"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/parser"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // PersistResults writes parsed file results to PostgreSQL.

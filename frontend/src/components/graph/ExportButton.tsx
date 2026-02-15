@@ -14,7 +14,7 @@ export function ExportButton({ graphRef }: Props) {
     const png = cy.png({ full: true, scale: 2, bg: "#ffffff" });
     const link = document.createElement("a");
     link.href = png;
-    link.download = "codegraph-export.png";
+    link.download = "lattice-export.png";
     link.click();
   };
 

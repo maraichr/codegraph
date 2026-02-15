@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/maraichr/codegraph/pkg/models"
+	"github.com/maraichr/lattice/pkg/models"
 )
 
 type ColumnLineageEdge struct {

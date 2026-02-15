@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
@@ -50,7 +51,7 @@ type claims struct {
 	Email           string      `json:"email"`
 	TenantID        string      `json:"tenant_id"`
 	Scope           string      `json:"scope"`
-	CodegraphScopes string      `json:"codegraph_scopes"`
+	LatticeScopes string      `json:"lattice_scopes"`
 	Azp             string      `json:"azp"`
 	RealmAccess     realmAccess `json:"realm_access"`
 }
@@ -59,43 +60,34 @@ type realmAccess struct {
 	Roles []string `json:"roles"`
 }
 
-// VerifyRequest extracts and verifies the Bearer token from the request.
-func (v *Verifier) VerifyRequest(r *http.Request) (*Principal, error) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return nil, fmt.Errorf("missing Authorization header")
-	}
-
-	parts := strings.SplitN(authHeader, " ", 2)
-	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return nil, fmt.Errorf("invalid Authorization header format")
-	}
-
-	token, err := v.verifier.Verify(r.Context(), parts[1])
+// VerifyToken verifies a raw Bearer token string and returns the Principal
+// and the token's expiry time.
+func (v *Verifier) VerifyToken(ctx context.Context, rawToken string) (*Principal, time.Time, error) {
+	token, err := v.verifier.Verify(ctx, rawToken)
 	if err != nil {
-		return nil, fmt.Errorf("token verification failed: %w", err)
+		return nil, time.Time{}, fmt.Errorf("token verification failed: %w", err)
 	}
 
 	var c claims
 	if err := token.Claims(&c); err != nil {
-		return nil, fmt.Errorf("failed to parse claims: %w", err)
+		return nil, time.Time{}, fmt.Errorf("failed to parse claims: %w", err)
 	}
 
 	if c.TenantID == "" {
-		return nil, fmt.Errorf("missing tenant_id claim")
+		return nil, time.Time{}, fmt.Errorf("missing tenant_id claim")
 	}
 
 	tenantID, err := uuid.Parse(c.TenantID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid tenant_id claim: %w", err)
+		return nil, time.Time{}, fmt.Errorf("invalid tenant_id claim: %w", err)
 	}
 
 	scopes := make(map[string]bool)
 	for _, s := range strings.Fields(c.Scope) {
 		scopes[s] = true
 	}
-	// Also parse codegraph-specific scopes from custom claim
-	for _, s := range strings.Fields(c.CodegraphScopes) {
+	// Also parse lattice-specific scopes from custom claim
+	for _, s := range strings.Fields(c.LatticeScopes) {
 		scopes[s] = true
 	}
 
@@ -112,5 +104,21 @@ func (v *Verifier) VerifyRequest(r *http.Request) (*Principal, error) {
 		ClientID: c.Azp,
 		Issuer:   token.Issuer,
 		Email:    c.Email,
-	}, nil
+	}, token.Expiry, nil
+}
+
+// VerifyRequest extracts and verifies the Bearer token from the request.
+func (v *Verifier) VerifyRequest(r *http.Request) (*Principal, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil, fmt.Errorf("missing Authorization header")
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return nil, fmt.Errorf("invalid Authorization header format")
+	}
+
+	p, _, err := v.VerifyToken(r.Context(), parts[1])
+	return p, err
 }

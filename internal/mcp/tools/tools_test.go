@@ -3,8 +3,8 @@ package tools
 import (
 	"testing"
 
-	"github.com/maraichr/codegraph/internal/mcp"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/mcp"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // --- classifyIntent ---

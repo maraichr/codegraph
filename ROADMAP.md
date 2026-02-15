@@ -1,4 +1,4 @@
-# CodeGraph Roadmap
+# Lattice Roadmap
 
 Current status: **Alpha** — Phases 1–3 complete, approaching first public release.
 

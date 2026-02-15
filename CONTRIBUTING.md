@@ -1,6 +1,6 @@
-# Contributing to CodeGraph
+# Contributing to Lattice
 
-Thank you for your interest in contributing to CodeGraph! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing to Lattice! This document provides guidelines for contributing to the project.
 
 ## Development Workflow
 
@@ -95,7 +95,7 @@ Update SQLC queries for incremental file upsert
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/maraichr/codegraph/issues) with the provided templates. Include:
+Use [GitHub Issues](https://github.com/maraichr/lattice/issues) with the provided templates. Include:
 - Steps to reproduce
 - Expected vs. actual behavior
 - Go version, OS, and relevant environment details

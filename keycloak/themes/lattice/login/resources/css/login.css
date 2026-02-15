@@ -1,0 +1,152 @@
+/* CodeGraph Keycloak Login Theme */
+
+/* Dark background matching CodeGraph app (zinc-950 tones) */
+body,
+.login-pf {
+  background-color: #09090b !important;
+  background-image: none !important;
+}
+
+.login-pf body {
+  background-color: #09090b !important;
+}
+
+/* Login card styling */
+#kc-login {
+  background-color: #18181b !important;
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  padding: 2rem;
+}
+
+.card-pf {
+  background-color: #18181b !important;
+  border: 1px solid #27272a !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+/* Header / branding */
+#kc-header-wrapper {
+  color: #fafafa !important;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+#kc-header {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Form labels */
+.login-pf .control-label,
+.login-pf label {
+  color: #a1a1aa !important;
+  font-weight: 500;
+}
+
+/* Input fields - rounded with dark styling */
+.login-pf input[type="text"],
+.login-pf input[type="password"],
+.login-pf input[type="email"],
+.login-pf .form-control {
+  background-color: #09090b !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 0.5rem !important;
+  color: #fafafa !important;
+  padding: 0.625rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  transition: border-color 0.15s ease;
+}
+
+.login-pf input[type="text"]:focus,
+.login-pf input[type="password"]:focus,
+.login-pf input[type="email"]:focus,
+.login-pf .form-control:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+  outline: none !important;
+}
+
+/* Primary button - indigo to match CodeGraph brand */
+.login-pf .btn-primary,
+.login-pf input[type="submit"].btn-primary {
+  background-color: #6366f1 !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  padding: 0.625rem 1.25rem !important;
+  font-size: 0.875rem !important;
+  width: 100%;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.login-pf .btn-primary:hover,
+.login-pf input[type="submit"].btn-primary:hover {
+  background-color: #4f46e5 !important;
+}
+
+.login-pf .btn-primary:active,
+.login-pf input[type="submit"].btn-primary:active {
+  background-color: #4338ca !important;
+}
+
+/* Secondary / link buttons */
+.login-pf .btn-default {
+  background-color: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 0.5rem !important;
+  color: #d4d4d8 !important;
+}
+
+/* Links */
+.login-pf a,
+.login-pf a:link,
+.login-pf a:visited {
+  color: #818cf8 !important;
+}
+
+.login-pf a:hover {
+  color: #a5b4fc !important;
+}
+
+/* Alert / error messages */
+.login-pf .alert-error,
+.login-pf .alert-danger {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border-radius: 0.5rem !important;
+  color: #fca5a5 !important;
+}
+
+/* Success messages */
+.login-pf .alert-success {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  border-radius: 0.5rem !important;
+  color: #86efac !important;
+}
+
+/* Checkbox styling */
+.login-pf .checkbox label {
+  color: #a1a1aa !important;
+}
+
+/* Footer / info text */
+.login-pf .kc-social-section,
+#kc-info-wrapper {
+  color: #71717a !important;
+}
+
+/* Remove PatternFly default backgrounds */
+.login-pf .container,
+.login-pf .container-fluid {
+  background: transparent !important;
+}

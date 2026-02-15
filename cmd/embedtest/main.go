@@ -16,8 +16,8 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-	"github.com/maraichr/codegraph/internal/config"
-	"github.com/maraichr/codegraph/internal/embedding"
+	"github.com/maraichr/lattice/internal/config"
+	"github.com/maraichr/lattice/internal/embedding"
 )
 
 func main() {

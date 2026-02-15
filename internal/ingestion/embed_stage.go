@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/maraichr/codegraph/internal/embedding"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 // EmbedStage generates vector embeddings for symbols.

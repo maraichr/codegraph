@@ -29,14 +29,15 @@ type OracleConfig struct {
 
 type AuthConfig struct {
 	Enabled       bool
-	IssuerURL     string // Discovery URL (may be internal, e.g. http://keycloak:8081/realms/codegraph)
-	PublicIssuer  string // Token issuer claim (browser-facing, e.g. http://localhost:8081/realms/codegraph)
+	IssuerURL     string // Discovery URL (may be internal, e.g. http://keycloak:8081/realms/lattice)
+	PublicIssuer  string // Token issuer claim (browser-facing, e.g. http://localhost:8081/realms/lattice)
 	Audience      string
 }
 
 // MCPConfig holds the MCP server listen configuration.
 type MCPConfig struct {
-	Addr string // Listen address (e.g. ":8080"). Env: MCP_ADDR.
+	Addr    string // Listen address (e.g. ":8080"). Env: MCP_ADDR.
+	BaseURL string // Public base URL for RFC 9728 resource metadata. Env: MCP_BASE_URL.
 }
 
 type ServerConfig struct {
@@ -155,13 +156,14 @@ func Load() (*Config, error) {
 			Endpoint: getEnv("S3_ENDPOINT", ""),
 		},
 		MCP: MCPConfig{
-			Addr: getEnv("MCP_ADDR", ":8080"),
+			Addr:    getEnv("MCP_ADDR", ":8080"),
+			BaseURL: getEnv("MCP_BASE_URL", ""),
 		},
 		Auth: AuthConfig{
 			Enabled:      getEnvBool("AUTH_ENABLED", false),
 			IssuerURL:    getEnv("AUTH_ISSUER_URL", ""),
 			PublicIssuer: getEnv("AUTH_PUBLIC_ISSUER", ""),
-			Audience:     getEnv("AUTH_AUDIENCE", "codegraph"),
+			Audience:     getEnv("AUTH_AUDIENCE", "lattice"),
 		},
 		Oracle: OracleConfig{
 			Model:   getEnv("ORACLE_MODEL", "minimax/minimax-m1"),

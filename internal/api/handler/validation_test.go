@@ -3,7 +3,7 @@ package handler
 import (
 	"testing"
 
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 func TestValidateSlug(t *testing.T) {

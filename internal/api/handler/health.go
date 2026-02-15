@@ -5,7 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 type HealthHandler struct {
