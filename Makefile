@@ -5,7 +5,7 @@ BINARY_DIR := bin
 GO := go
 GOFLAGS := -trimpath
 MIGRATE := migrate
-DB_URL ?= postgres://codegraph:codegraph@localhost:5432/codegraph?sslmode=disable
+DB_URL ?= postgres://lattice:lattice@localhost:5432/lattice?sslmode=disable
 
 # Build all binaries
 build:

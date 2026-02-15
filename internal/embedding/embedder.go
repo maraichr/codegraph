@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/lattice/internal/config"
 )
 
 // Embedder is the interface for embedding providers.

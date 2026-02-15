@@ -8,10 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	pgvector "github.com/pgvector/pgvector-go"
 
-	"github.com/maraichr/codegraph/internal/embedding"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 type SearchHandler struct {

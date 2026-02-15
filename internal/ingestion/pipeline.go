@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // Pipeline orchestrates the indexing stages for each ingestion job.

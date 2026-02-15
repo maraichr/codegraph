@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/maraichr/codegraph/internal/resolver"
+	"github.com/maraichr/lattice/internal/resolver"
 )
 
 // ResolveStage performs cross-file symbol resolution.

@@ -3,7 +3,7 @@ package handler
 import (
 	"regexp"
 
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 var slugRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$`)

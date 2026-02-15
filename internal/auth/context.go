@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	sdkauth "github.com/modelcontextprotocol/go-sdk/auth"
 )
 
 type ctxKey struct{}
@@ -24,10 +25,19 @@ func WithPrincipal(ctx context.Context, p *Principal) context.Context {
 	return context.WithValue(ctx, ctxKey{}, p)
 }
 
-// PrincipalFrom extracts the Principal from the context.
+// PrincipalFrom extracts the Principal from the context. It first checks the
+// direct context key (set by RequireAuth middleware), then falls back to the
+// SDK's TokenInfo.Extra["principal"] (set by RequireBearerToken middleware).
 func PrincipalFrom(ctx context.Context) (*Principal, bool) {
-	p, ok := ctx.Value(ctxKey{}).(*Principal)
-	return p, ok
+	if p, ok := ctx.Value(ctxKey{}).(*Principal); ok {
+		return p, true
+	}
+	if ti := sdkauth.TokenInfoFromContext(ctx); ti != nil {
+		if p, ok := ti.Extra["principal"].(*Principal); ok {
+			return p, true
+		}
+	}
+	return nil, false
 }
 
 // HasScope returns true if the principal has the given scope.
@@ -45,9 +55,9 @@ func (p *Principal) HasAnyScope(scopes ...string) bool {
 	return false
 }
 
-// IsAdmin returns true if the principal has the codegraph_admin role.
+// IsAdmin returns true if the principal has the lattice_admin role.
 func (p *Principal) IsAdmin() bool {
-	return p.Roles["codegraph_admin"]
+	return p.Roles["lattice_admin"]
 }
 
 // HasRole returns true if the principal has the given role.

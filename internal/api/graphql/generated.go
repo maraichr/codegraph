@@ -15,7 +15,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/maraichr/codegraph/pkg/models"
+	"github.com/maraichr/lattice/pkg/models"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -1040,7 +1040,7 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_createProject_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateProjectInput2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐCreateProjectInput)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateProjectInput2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐCreateProjectInput)
 	if err != nil {
 		return nil, err
 	}
@@ -1056,7 +1056,7 @@ func (ec *executionContext) field_Mutation_createSource_args(ctx context.Context
 		return nil, err
 	}
 	args["projectSlug"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateSourceInput2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐCreateSourceInput)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateSourceInput2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐCreateSourceInput)
 	if err != nil {
 		return nil, err
 	}
@@ -1110,7 +1110,7 @@ func (ec *executionContext) field_Mutation_updateProject_args(ctx context.Contex
 		return nil, err
 	}
 	args["slug"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateProjectInput2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐUpdateProjectInput)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateProjectInput2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐUpdateProjectInput)
 	if err != nil {
 		return nil, err
 	}
@@ -1153,7 +1153,7 @@ func (ec *executionContext) field_Query_columnLineage_args(ctx context.Context, 
 		return nil, err
 	}
 	args["depth"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "direction", ec.unmarshalOLineageDirection2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageDirection)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "direction", ec.unmarshalOLineageDirection2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageDirection)
 	if err != nil {
 		return nil, err
 	}
@@ -1169,7 +1169,7 @@ func (ec *executionContext) field_Query_impactAnalysis_args(ctx context.Context,
 		return nil, err
 	}
 	args["symbolId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "changeType", ec.unmarshalOChangeType2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐChangeType)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "changeType", ec.unmarshalOChangeType2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐChangeType)
 	if err != nil {
 		return nil, err
 	}
@@ -1195,7 +1195,7 @@ func (ec *executionContext) field_Query_lineageGraph_args(ctx context.Context, r
 		return nil, err
 	}
 	args["depth"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "direction", ec.unmarshalOLineageDirection2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageDirection)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "direction", ec.unmarshalOLineageDirection2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageDirection)
 	if err != nil {
 		return nil, err
 	}
@@ -1243,7 +1243,7 @@ func (ec *executionContext) field_Query_searchSymbols_args(ctx context.Context, 
 		return nil, err
 	}
 	args["query"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "kinds", ec.unmarshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKindᚄ)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "kinds", ec.unmarshalOSymbolKind2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKindᚄ)
 	if err != nil {
 		return nil, err
 	}
@@ -1274,7 +1274,7 @@ func (ec *executionContext) field_Query_semanticSearch_args(ctx context.Context,
 		return nil, err
 	}
 	args["query"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "kinds", ec.unmarshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKindᚄ)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "kinds", ec.unmarshalOSymbolKind2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKindᚄ)
 	if err != nil {
 		return nil, err
 	}
@@ -1301,7 +1301,7 @@ func (ec *executionContext) field_Query_symbol_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Symbol_incomingEdges_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "types", ec.unmarshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeTypeᚄ)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "types", ec.unmarshalOEdgeType2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeTypeᚄ)
 	if err != nil {
 		return nil, err
 	}
@@ -1312,7 +1312,7 @@ func (ec *executionContext) field_Symbol_incomingEdges_args(ctx context.Context,
 func (ec *executionContext) field_Symbol_outgoingEdges_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "types", ec.unmarshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeTypeᚄ)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "types", ec.unmarshalOEdgeType2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeTypeᚄ)
 	if err != nil {
 		return nil, err
 	}
@@ -1498,7 +1498,7 @@ func (ec *executionContext) _ColumnLineageGraph_nodes(ctx context.Context, field
 			return obj.Nodes, nil
 		},
 		nil,
-		ec.marshalNColumnLineageNode2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageNodeᚄ,
+		ec.marshalNColumnLineageNode2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageNodeᚄ,
 		true,
 		true,
 	)
@@ -1539,7 +1539,7 @@ func (ec *executionContext) _ColumnLineageGraph_edges(ctx context.Context, field
 			return obj.Edges, nil
 		},
 		nil,
-		ec.marshalNColumnLineageEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdgeᚄ,
+		ec.marshalNColumnLineageEdge2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdgeᚄ,
 		true,
 		true,
 	)
@@ -1868,7 +1868,7 @@ func (ec *executionContext) _ImpactAnalysisResult_root(ctx context.Context, fiel
 			return obj.Root, nil
 		},
 		nil,
-		ec.marshalNImpactSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactSymbol,
+		ec.marshalNImpactSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactSymbol,
 		true,
 		true,
 	)
@@ -1909,7 +1909,7 @@ func (ec *executionContext) _ImpactAnalysisResult_changeType(ctx context.Context
 			return obj.ChangeType, nil
 		},
 		nil,
-		ec.marshalNChangeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐChangeType,
+		ec.marshalNChangeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐChangeType,
 		true,
 		true,
 	)
@@ -1938,7 +1938,7 @@ func (ec *executionContext) _ImpactAnalysisResult_directImpact(ctx context.Conte
 			return obj.DirectImpact, nil
 		},
 		nil,
-		ec.marshalNImpactNode2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactNodeᚄ,
+		ec.marshalNImpactNode2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactNodeᚄ,
 		true,
 		true,
 	)
@@ -1979,7 +1979,7 @@ func (ec *executionContext) _ImpactAnalysisResult_transitiveImpact(ctx context.C
 			return obj.TransitiveImpact, nil
 		},
 		nil,
-		ec.marshalNImpactNode2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactNodeᚄ,
+		ec.marshalNImpactNode2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactNodeᚄ,
 		true,
 		true,
 	)
@@ -2049,7 +2049,7 @@ func (ec *executionContext) _ImpactNode_symbol(ctx context.Context, field graphq
 			return obj.Symbol, nil
 		},
 		nil,
-		ec.marshalNImpactSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactSymbol,
+		ec.marshalNImpactSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactSymbol,
 		true,
 		true,
 	)
@@ -2119,7 +2119,7 @@ func (ec *executionContext) _ImpactNode_severity(ctx context.Context, field grap
 			return obj.Severity, nil
 		},
 		nil,
-		ec.marshalNSeverity2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSeverity,
+		ec.marshalNSeverity2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSeverity,
 		true,
 		true,
 	)
@@ -2380,7 +2380,7 @@ func (ec *executionContext) _IndexRun_status(ctx context.Context, field graphql.
 			return obj.Status, nil
 		},
 		nil,
-		ec.marshalNIndexRunStatus2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRunStatus,
+		ec.marshalNIndexRunStatus2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRunStatus,
 		true,
 		true,
 	)
@@ -2612,7 +2612,7 @@ func (ec *executionContext) _LineageGraph_nodes(ctx context.Context, field graph
 			return obj.Nodes, nil
 		},
 		nil,
-		ec.marshalNSymbol2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolᚄ,
+		ec.marshalNSymbol2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolᚄ,
 		true,
 		true,
 	)
@@ -2667,7 +2667,7 @@ func (ec *executionContext) _LineageGraph_edges(ctx context.Context, field graph
 			return obj.Edges, nil
 		},
 		nil,
-		ec.marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolEdgeᚄ,
+		ec.marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolEdgeᚄ,
 		true,
 		true,
 	)
@@ -2736,7 +2736,7 @@ func (ec *executionContext) _Mutation_createProject(ctx context.Context, field g
 			return ec.resolvers.Mutation().CreateProject(ctx, fc.Args["input"].(CreateProjectInput))
 		},
 		nil,
-		ec.marshalNProject2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject,
+		ec.marshalNProject2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject,
 		true,
 		true,
 	)
@@ -2799,7 +2799,7 @@ func (ec *executionContext) _Mutation_updateProject(ctx context.Context, field g
 			return ec.resolvers.Mutation().UpdateProject(ctx, fc.Args["slug"].(string), fc.Args["input"].(UpdateProjectInput))
 		},
 		nil,
-		ec.marshalNProject2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject,
+		ec.marshalNProject2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject,
 		true,
 		true,
 	)
@@ -2903,7 +2903,7 @@ func (ec *executionContext) _Mutation_createSource(ctx context.Context, field gr
 			return ec.resolvers.Mutation().CreateSource(ctx, fc.Args["projectSlug"].(string), fc.Args["input"].(CreateSourceInput))
 		},
 		nil,
-		ec.marshalNSource2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSource,
+		ec.marshalNSource2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSource,
 		true,
 		true,
 	)
@@ -2997,7 +2997,7 @@ func (ec *executionContext) _Mutation_triggerIndexRun(ctx context.Context, field
 			return ec.resolvers.Mutation().TriggerIndexRun(ctx, fc.Args["projectSlug"].(string), fc.Args["sourceId"].(*string))
 		},
 		nil,
-		ec.marshalNIndexRun2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRun,
+		ec.marshalNIndexRun2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRun,
 		true,
 		true,
 	)
@@ -3173,7 +3173,7 @@ func (ec *executionContext) _Project_sources(ctx context.Context, field graphql.
 			return ec.resolvers.Project().Sources(ctx, obj)
 		},
 		nil,
-		ec.marshalNSource2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSourceᚄ,
+		ec.marshalNSource2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSourceᚄ,
 		true,
 		true,
 	)
@@ -3215,7 +3215,7 @@ func (ec *executionContext) _Project_indexRuns(ctx context.Context, field graphq
 			return ec.resolvers.Project().IndexRuns(ctx, obj, fc.Args["limit"].(*int))
 		},
 		nil,
-		ec.marshalNIndexRun2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRunᚄ,
+		ec.marshalNIndexRun2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRunᚄ,
 		true,
 		true,
 	)
@@ -3391,7 +3391,7 @@ func (ec *executionContext) _ProjectConnection_nodes(ctx context.Context, field 
 			return obj.Nodes, nil
 		},
 		nil,
-		ec.marshalNProject2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProjectᚄ,
+		ec.marshalNProject2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProjectᚄ,
 		true,
 		true,
 	)
@@ -3472,7 +3472,7 @@ func (ec *executionContext) _Query_projects(ctx context.Context, field graphql.C
 			return ec.resolvers.Query().Projects(ctx, fc.Args["limit"].(*int), fc.Args["offset"].(*int))
 		},
 		nil,
-		ec.marshalNProjectConnection2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProjectConnection,
+		ec.marshalNProjectConnection2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProjectConnection,
 		true,
 		true,
 	)
@@ -3519,7 +3519,7 @@ func (ec *executionContext) _Query_project(ctx context.Context, field graphql.Co
 			return ec.resolvers.Query().Project(ctx, fc.Args["slug"].(string))
 		},
 		nil,
-		ec.marshalOProject2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject,
+		ec.marshalOProject2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject,
 		true,
 		false,
 	)
@@ -3582,7 +3582,7 @@ func (ec *executionContext) _Query_symbol(ctx context.Context, field graphql.Col
 			return ec.resolvers.Query().Symbol(ctx, fc.Args["id"].(string))
 		},
 		nil,
-		ec.marshalOSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol,
+		ec.marshalOSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol,
 		true,
 		false,
 	)
@@ -3649,7 +3649,7 @@ func (ec *executionContext) _Query_searchSymbols(ctx context.Context, field grap
 			return ec.resolvers.Query().SearchSymbols(ctx, fc.Args["projectSlug"].(string), fc.Args["query"].(string), fc.Args["kinds"].([]models.SymbolKind), fc.Args["languages"].([]string), fc.Args["limit"].(*int))
 		},
 		nil,
-		ec.marshalNSymbol2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolᚄ,
+		ec.marshalNSymbol2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolᚄ,
 		true,
 		true,
 	)
@@ -3716,7 +3716,7 @@ func (ec *executionContext) _Query_lineageGraph(ctx context.Context, field graph
 			return ec.resolvers.Query().LineageGraph(ctx, fc.Args["symbolId"].(string), fc.Args["depth"].(*int), fc.Args["direction"].(*LineageDirection))
 		},
 		nil,
-		ec.marshalNLineageGraph2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageGraph,
+		ec.marshalNLineageGraph2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageGraph,
 		true,
 		true,
 	)
@@ -3765,7 +3765,7 @@ func (ec *executionContext) _Query_semanticSearch(ctx context.Context, field gra
 			return ec.resolvers.Query().SemanticSearch(ctx, fc.Args["projectSlug"].(string), fc.Args["query"].(string), fc.Args["kinds"].([]models.SymbolKind), fc.Args["topK"].(*int))
 		},
 		nil,
-		ec.marshalNSemanticSearchResult2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResultᚄ,
+		ec.marshalNSemanticSearchResult2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResultᚄ,
 		true,
 		true,
 	)
@@ -3812,7 +3812,7 @@ func (ec *executionContext) _Query_columnLineage(ctx context.Context, field grap
 			return ec.resolvers.Query().ColumnLineage(ctx, fc.Args["columnId"].(string), fc.Args["depth"].(*int), fc.Args["direction"].(*LineageDirection))
 		},
 		nil,
-		ec.marshalNColumnLineageGraph2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageGraph,
+		ec.marshalNColumnLineageGraph2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageGraph,
 		true,
 		true,
 	)
@@ -3861,7 +3861,7 @@ func (ec *executionContext) _Query_impactAnalysis(ctx context.Context, field gra
 			return ec.resolvers.Query().ImpactAnalysis(ctx, fc.Args["symbolId"].(string), fc.Args["changeType"].(*ChangeType), fc.Args["maxDepth"].(*int))
 		},
 		nil,
-		ec.marshalNImpactAnalysisResult2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactAnalysisResult,
+		ec.marshalNImpactAnalysisResult2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactAnalysisResult,
 		true,
 		true,
 	)
@@ -4021,7 +4021,7 @@ func (ec *executionContext) _SemanticSearchResult_symbol(ctx context.Context, fi
 			return obj.Symbol, nil
 		},
 		nil,
-		ec.marshalNSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol,
+		ec.marshalNSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol,
 		true,
 		true,
 	)
@@ -4163,7 +4163,7 @@ func (ec *executionContext) _Source_sourceType(ctx context.Context, field graphq
 			return obj.SourceType, nil
 		},
 		nil,
-		ec.marshalNSourceType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSourceType,
+		ec.marshalNSourceType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSourceType,
 		true,
 		true,
 	)
@@ -4337,7 +4337,7 @@ func (ec *executionContext) _Symbol_kind(ctx context.Context, field graphql.Coll
 			return obj.Kind, nil
 		},
 		nil,
-		ec.marshalNSymbolKind2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKind,
+		ec.marshalNSymbolKind2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKind,
 		true,
 		true,
 	)
@@ -4395,7 +4395,7 @@ func (ec *executionContext) _Symbol_file(ctx context.Context, field graphql.Coll
 			return ec.resolvers.Symbol().File(ctx, obj)
 		},
 		nil,
-		ec.marshalNFile2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐFile,
+		ec.marshalNFile2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐFile,
 		true,
 		true,
 	)
@@ -4551,7 +4551,7 @@ func (ec *executionContext) _Symbol_incomingEdges(ctx context.Context, field gra
 			return ec.resolvers.Symbol().IncomingEdges(ctx, obj, fc.Args["types"].([]models.EdgeType))
 		},
 		nil,
-		ec.marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolEdgeᚄ,
+		ec.marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolEdgeᚄ,
 		true,
 		true,
 	)
@@ -4602,7 +4602,7 @@ func (ec *executionContext) _Symbol_outgoingEdges(ctx context.Context, field gra
 			return ec.resolvers.Symbol().OutgoingEdges(ctx, obj, fc.Args["types"].([]models.EdgeType))
 		},
 		nil,
-		ec.marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolEdgeᚄ,
+		ec.marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolEdgeᚄ,
 		true,
 		true,
 	)
@@ -4681,7 +4681,7 @@ func (ec *executionContext) _SymbolEdge_source(ctx context.Context, field graphq
 			return ec.resolvers.SymbolEdge().Source(ctx, obj)
 		},
 		nil,
-		ec.marshalNSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol,
+		ec.marshalNSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol,
 		true,
 		true,
 	)
@@ -4736,7 +4736,7 @@ func (ec *executionContext) _SymbolEdge_target(ctx context.Context, field graphq
 			return ec.resolvers.SymbolEdge().Target(ctx, obj)
 		},
 		nil,
-		ec.marshalNSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol,
+		ec.marshalNSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol,
 		true,
 		true,
 	)
@@ -4791,7 +4791,7 @@ func (ec *executionContext) _SymbolEdge_edgeType(ctx context.Context, field grap
 			return obj.EdgeType, nil
 		},
 		nil,
-		ec.marshalNEdgeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeType,
+		ec.marshalNEdgeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeType,
 		true,
 		true,
 	)
@@ -6320,7 +6320,7 @@ func (ec *executionContext) unmarshalInputCreateSourceInput(ctx context.Context,
 			it.Name = data
 		case "sourceType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sourceType"))
-			data, err := ec.unmarshalNSourceType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSourceType(ctx, v)
+			data, err := ec.unmarshalNSourceType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSourceType(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8290,17 +8290,17 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNChangeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, v any) (ChangeType, error) {
+func (ec *executionContext) unmarshalNChangeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, v any) (ChangeType, error) {
 	var res ChangeType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNChangeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, sel ast.SelectionSet, v ChangeType) graphql.Marshaler {
+func (ec *executionContext) marshalNChangeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, sel ast.SelectionSet, v ChangeType) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) marshalNColumnLineageEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*ColumnLineageEdge) graphql.Marshaler {
+func (ec *executionContext) marshalNColumnLineageEdge2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*ColumnLineageEdge) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8324,7 +8324,7 @@ func (ec *executionContext) marshalNColumnLineageEdge2ᚕᚖgithubᚗcomᚋcodeg
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNColumnLineageEdge2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdge(ctx, sel, v[i])
+			ret[i] = ec.marshalNColumnLineageEdge2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdge(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8344,7 +8344,7 @@ func (ec *executionContext) marshalNColumnLineageEdge2ᚕᚖgithubᚗcomᚋcodeg
 	return ret
 }
 
-func (ec *executionContext) marshalNColumnLineageEdge2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdge(ctx context.Context, sel ast.SelectionSet, v *ColumnLineageEdge) graphql.Marshaler {
+func (ec *executionContext) marshalNColumnLineageEdge2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageEdge(ctx context.Context, sel ast.SelectionSet, v *ColumnLineageEdge) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8354,11 +8354,11 @@ func (ec *executionContext) marshalNColumnLineageEdge2ᚖgithubᚗcomᚋcodegrap
 	return ec._ColumnLineageEdge(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNColumnLineageGraph2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageGraph(ctx context.Context, sel ast.SelectionSet, v ColumnLineageGraph) graphql.Marshaler {
+func (ec *executionContext) marshalNColumnLineageGraph2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageGraph(ctx context.Context, sel ast.SelectionSet, v ColumnLineageGraph) graphql.Marshaler {
 	return ec._ColumnLineageGraph(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNColumnLineageGraph2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageGraph(ctx context.Context, sel ast.SelectionSet, v *ColumnLineageGraph) graphql.Marshaler {
+func (ec *executionContext) marshalNColumnLineageGraph2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageGraph(ctx context.Context, sel ast.SelectionSet, v *ColumnLineageGraph) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8368,7 +8368,7 @@ func (ec *executionContext) marshalNColumnLineageGraph2ᚖgithubᚗcomᚋcodegra
 	return ec._ColumnLineageGraph(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNColumnLineageNode2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageNodeᚄ(ctx context.Context, sel ast.SelectionSet, v []*ColumnLineageNode) graphql.Marshaler {
+func (ec *executionContext) marshalNColumnLineageNode2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageNodeᚄ(ctx context.Context, sel ast.SelectionSet, v []*ColumnLineageNode) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8392,7 +8392,7 @@ func (ec *executionContext) marshalNColumnLineageNode2ᚕᚖgithubᚗcomᚋcodeg
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNColumnLineageNode2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageNode(ctx, sel, v[i])
+			ret[i] = ec.marshalNColumnLineageNode2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageNode(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8412,7 +8412,7 @@ func (ec *executionContext) marshalNColumnLineageNode2ᚕᚖgithubᚗcomᚋcodeg
 	return ret
 }
 
-func (ec *executionContext) marshalNColumnLineageNode2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐColumnLineageNode(ctx context.Context, sel ast.SelectionSet, v *ColumnLineageNode) graphql.Marshaler {
+func (ec *executionContext) marshalNColumnLineageNode2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐColumnLineageNode(ctx context.Context, sel ast.SelectionSet, v *ColumnLineageNode) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8422,12 +8422,12 @@ func (ec *executionContext) marshalNColumnLineageNode2ᚖgithubᚗcomᚋcodegrap
 	return ec._ColumnLineageNode(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNCreateProjectInput2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐCreateProjectInput(ctx context.Context, v any) (CreateProjectInput, error) {
+func (ec *executionContext) unmarshalNCreateProjectInput2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐCreateProjectInput(ctx context.Context, v any) (CreateProjectInput, error) {
 	res, err := ec.unmarshalInputCreateProjectInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNCreateSourceInput2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐCreateSourceInput(ctx context.Context, v any) (CreateSourceInput, error) {
+func (ec *executionContext) unmarshalNCreateSourceInput2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐCreateSourceInput(ctx context.Context, v any) (CreateSourceInput, error) {
 	res, err := ec.unmarshalInputCreateSourceInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -8448,13 +8448,13 @@ func (ec *executionContext) marshalNDateTime2timeᚐTime(ctx context.Context, se
 	return res
 }
 
-func (ec *executionContext) unmarshalNEdgeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeType(ctx context.Context, v any) (models.EdgeType, error) {
+func (ec *executionContext) unmarshalNEdgeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeType(ctx context.Context, v any) (models.EdgeType, error) {
 	tmp, err := graphql.UnmarshalString(v)
 	res := models.EdgeType(tmp)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNEdgeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeType(ctx context.Context, sel ast.SelectionSet, v models.EdgeType) graphql.Marshaler {
+func (ec *executionContext) marshalNEdgeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeType(ctx context.Context, sel ast.SelectionSet, v models.EdgeType) graphql.Marshaler {
 	_ = sel
 	res := graphql.MarshalString(string(v))
 	if res == graphql.Null {
@@ -8465,11 +8465,11 @@ func (ec *executionContext) marshalNEdgeType2githubᚗcomᚋcodegraphᚑlabsᚋc
 	return res
 }
 
-func (ec *executionContext) marshalNFile2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐFile(ctx context.Context, sel ast.SelectionSet, v models.File) graphql.Marshaler {
+func (ec *executionContext) marshalNFile2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐFile(ctx context.Context, sel ast.SelectionSet, v models.File) graphql.Marshaler {
 	return ec._File(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFile2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐFile(ctx context.Context, sel ast.SelectionSet, v *models.File) graphql.Marshaler {
+func (ec *executionContext) marshalNFile2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐFile(ctx context.Context, sel ast.SelectionSet, v *models.File) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8541,11 +8541,11 @@ func (ec *executionContext) marshalNID2ᚕstringᚄ(ctx context.Context, sel ast
 	return ret
 }
 
-func (ec *executionContext) marshalNImpactAnalysisResult2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactAnalysisResult(ctx context.Context, sel ast.SelectionSet, v ImpactAnalysisResult) graphql.Marshaler {
+func (ec *executionContext) marshalNImpactAnalysisResult2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactAnalysisResult(ctx context.Context, sel ast.SelectionSet, v ImpactAnalysisResult) graphql.Marshaler {
 	return ec._ImpactAnalysisResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNImpactAnalysisResult2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactAnalysisResult(ctx context.Context, sel ast.SelectionSet, v *ImpactAnalysisResult) graphql.Marshaler {
+func (ec *executionContext) marshalNImpactAnalysisResult2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactAnalysisResult(ctx context.Context, sel ast.SelectionSet, v *ImpactAnalysisResult) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8555,7 +8555,7 @@ func (ec *executionContext) marshalNImpactAnalysisResult2ᚖgithubᚗcomᚋcodeg
 	return ec._ImpactAnalysisResult(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNImpactNode2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactNodeᚄ(ctx context.Context, sel ast.SelectionSet, v []*ImpactNode) graphql.Marshaler {
+func (ec *executionContext) marshalNImpactNode2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactNodeᚄ(ctx context.Context, sel ast.SelectionSet, v []*ImpactNode) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8579,7 +8579,7 @@ func (ec *executionContext) marshalNImpactNode2ᚕᚖgithubᚗcomᚋcodegraphᚑ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNImpactNode2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactNode(ctx, sel, v[i])
+			ret[i] = ec.marshalNImpactNode2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactNode(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8599,7 +8599,7 @@ func (ec *executionContext) marshalNImpactNode2ᚕᚖgithubᚗcomᚋcodegraphᚑ
 	return ret
 }
 
-func (ec *executionContext) marshalNImpactNode2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactNode(ctx context.Context, sel ast.SelectionSet, v *ImpactNode) graphql.Marshaler {
+func (ec *executionContext) marshalNImpactNode2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactNode(ctx context.Context, sel ast.SelectionSet, v *ImpactNode) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8609,7 +8609,7 @@ func (ec *executionContext) marshalNImpactNode2ᚖgithubᚗcomᚋcodegraphᚑlab
 	return ec._ImpactNode(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNImpactSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐImpactSymbol(ctx context.Context, sel ast.SelectionSet, v *ImpactSymbol) graphql.Marshaler {
+func (ec *executionContext) marshalNImpactSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐImpactSymbol(ctx context.Context, sel ast.SelectionSet, v *ImpactSymbol) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8619,11 +8619,11 @@ func (ec *executionContext) marshalNImpactSymbol2ᚖgithubᚗcomᚋcodegraphᚑl
 	return ec._ImpactSymbol(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNIndexRun2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRun(ctx context.Context, sel ast.SelectionSet, v IndexRun) graphql.Marshaler {
+func (ec *executionContext) marshalNIndexRun2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRun(ctx context.Context, sel ast.SelectionSet, v IndexRun) graphql.Marshaler {
 	return ec._IndexRun(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNIndexRun2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRunᚄ(ctx context.Context, sel ast.SelectionSet, v []*IndexRun) graphql.Marshaler {
+func (ec *executionContext) marshalNIndexRun2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRunᚄ(ctx context.Context, sel ast.SelectionSet, v []*IndexRun) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8647,7 +8647,7 @@ func (ec *executionContext) marshalNIndexRun2ᚕᚖgithubᚗcomᚋcodegraphᚑla
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNIndexRun2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRun(ctx, sel, v[i])
+			ret[i] = ec.marshalNIndexRun2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRun(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8667,7 +8667,7 @@ func (ec *executionContext) marshalNIndexRun2ᚕᚖgithubᚗcomᚋcodegraphᚑla
 	return ret
 }
 
-func (ec *executionContext) marshalNIndexRun2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRun(ctx context.Context, sel ast.SelectionSet, v *IndexRun) graphql.Marshaler {
+func (ec *executionContext) marshalNIndexRun2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRun(ctx context.Context, sel ast.SelectionSet, v *IndexRun) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8677,13 +8677,13 @@ func (ec *executionContext) marshalNIndexRun2ᚖgithubᚗcomᚋcodegraphᚑlabs�
 	return ec._IndexRun(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNIndexRunStatus2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRunStatus(ctx context.Context, v any) (IndexRunStatus, error) {
+func (ec *executionContext) unmarshalNIndexRunStatus2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRunStatus(ctx context.Context, v any) (IndexRunStatus, error) {
 	var res IndexRunStatus
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNIndexRunStatus2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐIndexRunStatus(ctx context.Context, sel ast.SelectionSet, v IndexRunStatus) graphql.Marshaler {
+func (ec *executionContext) marshalNIndexRunStatus2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐIndexRunStatus(ctx context.Context, sel ast.SelectionSet, v IndexRunStatus) graphql.Marshaler {
 	return v
 }
 
@@ -8719,11 +8719,11 @@ func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.Selec
 	return res
 }
 
-func (ec *executionContext) marshalNLineageGraph2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageGraph(ctx context.Context, sel ast.SelectionSet, v LineageGraph) graphql.Marshaler {
+func (ec *executionContext) marshalNLineageGraph2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageGraph(ctx context.Context, sel ast.SelectionSet, v LineageGraph) graphql.Marshaler {
 	return ec._LineageGraph(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNLineageGraph2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageGraph(ctx context.Context, sel ast.SelectionSet, v *LineageGraph) graphql.Marshaler {
+func (ec *executionContext) marshalNLineageGraph2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageGraph(ctx context.Context, sel ast.SelectionSet, v *LineageGraph) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8733,11 +8733,11 @@ func (ec *executionContext) marshalNLineageGraph2ᚖgithubᚗcomᚋcodegraphᚑl
 	return ec._LineageGraph(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNProject2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject(ctx context.Context, sel ast.SelectionSet, v Project) graphql.Marshaler {
+func (ec *executionContext) marshalNProject2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject(ctx context.Context, sel ast.SelectionSet, v Project) graphql.Marshaler {
 	return ec._Project(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNProject2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*Project) graphql.Marshaler {
+func (ec *executionContext) marshalNProject2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*Project) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8761,7 +8761,7 @@ func (ec *executionContext) marshalNProject2ᚕᚖgithubᚗcomᚋcodegraphᚑlab
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProject2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject(ctx, sel, v[i])
+			ret[i] = ec.marshalNProject2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8781,7 +8781,7 @@ func (ec *executionContext) marshalNProject2ᚕᚖgithubᚗcomᚋcodegraphᚑlab
 	return ret
 }
 
-func (ec *executionContext) marshalNProject2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject(ctx context.Context, sel ast.SelectionSet, v *Project) graphql.Marshaler {
+func (ec *executionContext) marshalNProject2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject(ctx context.Context, sel ast.SelectionSet, v *Project) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8791,11 +8791,11 @@ func (ec *executionContext) marshalNProject2ᚖgithubᚗcomᚋcodegraphᚑlabs�
 	return ec._Project(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNProjectConnection2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProjectConnection(ctx context.Context, sel ast.SelectionSet, v ProjectConnection) graphql.Marshaler {
+func (ec *executionContext) marshalNProjectConnection2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProjectConnection(ctx context.Context, sel ast.SelectionSet, v ProjectConnection) graphql.Marshaler {
 	return ec._ProjectConnection(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNProjectConnection2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProjectConnection(ctx context.Context, sel ast.SelectionSet, v *ProjectConnection) graphql.Marshaler {
+func (ec *executionContext) marshalNProjectConnection2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProjectConnection(ctx context.Context, sel ast.SelectionSet, v *ProjectConnection) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8805,7 +8805,7 @@ func (ec *executionContext) marshalNProjectConnection2ᚖgithubᚗcomᚋcodegrap
 	return ec._ProjectConnection(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNSemanticSearchResult2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResultᚄ(ctx context.Context, sel ast.SelectionSet, v []*SemanticSearchResult) graphql.Marshaler {
+func (ec *executionContext) marshalNSemanticSearchResult2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResultᚄ(ctx context.Context, sel ast.SelectionSet, v []*SemanticSearchResult) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8829,7 +8829,7 @@ func (ec *executionContext) marshalNSemanticSearchResult2ᚕᚖgithubᚗcomᚋco
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSemanticSearchResult2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResult(ctx, sel, v[i])
+			ret[i] = ec.marshalNSemanticSearchResult2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResult(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8849,7 +8849,7 @@ func (ec *executionContext) marshalNSemanticSearchResult2ᚕᚖgithubᚗcomᚋco
 	return ret
 }
 
-func (ec *executionContext) marshalNSemanticSearchResult2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResult(ctx context.Context, sel ast.SelectionSet, v *SemanticSearchResult) graphql.Marshaler {
+func (ec *executionContext) marshalNSemanticSearchResult2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSemanticSearchResult(ctx context.Context, sel ast.SelectionSet, v *SemanticSearchResult) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8859,21 +8859,21 @@ func (ec *executionContext) marshalNSemanticSearchResult2ᚖgithubᚗcomᚋcodeg
 	return ec._SemanticSearchResult(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNSeverity2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSeverity(ctx context.Context, v any) (Severity, error) {
+func (ec *executionContext) unmarshalNSeverity2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSeverity(ctx context.Context, v any) (Severity, error) {
 	var res Severity
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSeverity2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSeverity(ctx context.Context, sel ast.SelectionSet, v Severity) graphql.Marshaler {
+func (ec *executionContext) marshalNSeverity2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSeverity(ctx context.Context, sel ast.SelectionSet, v Severity) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) marshalNSource2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSource(ctx context.Context, sel ast.SelectionSet, v Source) graphql.Marshaler {
+func (ec *executionContext) marshalNSource2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSource(ctx context.Context, sel ast.SelectionSet, v Source) graphql.Marshaler {
 	return ec._Source(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSource2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSourceᚄ(ctx context.Context, sel ast.SelectionSet, v []*Source) graphql.Marshaler {
+func (ec *executionContext) marshalNSource2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSourceᚄ(ctx context.Context, sel ast.SelectionSet, v []*Source) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8897,7 +8897,7 @@ func (ec *executionContext) marshalNSource2ᚕᚖgithubᚗcomᚋcodegraphᚑlabs
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSource2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSource(ctx, sel, v[i])
+			ret[i] = ec.marshalNSource2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSource(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8917,7 +8917,7 @@ func (ec *executionContext) marshalNSource2ᚕᚖgithubᚗcomᚋcodegraphᚑlabs
 	return ret
 }
 
-func (ec *executionContext) marshalNSource2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSource(ctx context.Context, sel ast.SelectionSet, v *Source) graphql.Marshaler {
+func (ec *executionContext) marshalNSource2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSource(ctx context.Context, sel ast.SelectionSet, v *Source) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -8927,13 +8927,13 @@ func (ec *executionContext) marshalNSource2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋ
 	return ec._Source(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNSourceType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSourceType(ctx context.Context, v any) (SourceType, error) {
+func (ec *executionContext) unmarshalNSourceType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSourceType(ctx context.Context, v any) (SourceType, error) {
 	var res SourceType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSourceType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐSourceType(ctx context.Context, sel ast.SelectionSet, v SourceType) graphql.Marshaler {
+func (ec *executionContext) marshalNSourceType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐSourceType(ctx context.Context, sel ast.SelectionSet, v SourceType) graphql.Marshaler {
 	return v
 }
 
@@ -8953,11 +8953,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNSymbol2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol(ctx context.Context, sel ast.SelectionSet, v models.Symbol) graphql.Marshaler {
+func (ec *executionContext) marshalNSymbol2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol(ctx context.Context, sel ast.SelectionSet, v models.Symbol) graphql.Marshaler {
 	return ec._Symbol(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSymbol2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Symbol) graphql.Marshaler {
+func (ec *executionContext) marshalNSymbol2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Symbol) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8981,7 +8981,7 @@ func (ec *executionContext) marshalNSymbol2ᚕᚖgithubᚗcomᚋcodegraphᚑlabs
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol(ctx, sel, v[i])
+			ret[i] = ec.marshalNSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9001,7 +9001,7 @@ func (ec *executionContext) marshalNSymbol2ᚕᚖgithubᚗcomᚋcodegraphᚑlabs
 	return ret
 }
 
-func (ec *executionContext) marshalNSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol(ctx context.Context, sel ast.SelectionSet, v *models.Symbol) graphql.Marshaler {
+func (ec *executionContext) marshalNSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol(ctx context.Context, sel ast.SelectionSet, v *models.Symbol) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -9011,7 +9011,7 @@ func (ec *executionContext) marshalNSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋ
 	return ec._Symbol(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.SymbolEdge) graphql.Marshaler {
+func (ec *executionContext) marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.SymbolEdge) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -9035,7 +9035,7 @@ func (ec *executionContext) marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSymbolEdge2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolEdge(ctx, sel, v[i])
+			ret[i] = ec.marshalNSymbolEdge2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolEdge(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9055,7 +9055,7 @@ func (ec *executionContext) marshalNSymbolEdge2ᚕᚖgithubᚗcomᚋcodegraphᚑ
 	return ret
 }
 
-func (ec *executionContext) marshalNSymbolEdge2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolEdge(ctx context.Context, sel ast.SelectionSet, v *models.SymbolEdge) graphql.Marshaler {
+func (ec *executionContext) marshalNSymbolEdge2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolEdge(ctx context.Context, sel ast.SelectionSet, v *models.SymbolEdge) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -9065,13 +9065,13 @@ func (ec *executionContext) marshalNSymbolEdge2ᚖgithubᚗcomᚋcodegraphᚑlab
 	return ec._SymbolEdge(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNSymbolKind2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKind(ctx context.Context, v any) (models.SymbolKind, error) {
+func (ec *executionContext) unmarshalNSymbolKind2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKind(ctx context.Context, v any) (models.SymbolKind, error) {
 	tmp, err := graphql.UnmarshalString(v)
 	res := models.SymbolKind(tmp)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSymbolKind2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKind(ctx context.Context, sel ast.SelectionSet, v models.SymbolKind) graphql.Marshaler {
+func (ec *executionContext) marshalNSymbolKind2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKind(ctx context.Context, sel ast.SelectionSet, v models.SymbolKind) graphql.Marshaler {
 	_ = sel
 	res := graphql.MarshalString(string(v))
 	if res == graphql.Null {
@@ -9082,7 +9082,7 @@ func (ec *executionContext) marshalNSymbolKind2githubᚗcomᚋcodegraphᚑlabs�
 	return res
 }
 
-func (ec *executionContext) unmarshalNUpdateProjectInput2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐUpdateProjectInput(ctx context.Context, v any) (UpdateProjectInput, error) {
+func (ec *executionContext) unmarshalNUpdateProjectInput2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐUpdateProjectInput(ctx context.Context, v any) (UpdateProjectInput, error) {
 	res, err := ec.unmarshalInputUpdateProjectInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -9370,7 +9370,7 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) unmarshalOChangeType2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, v any) (*ChangeType, error) {
+func (ec *executionContext) unmarshalOChangeType2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, v any) (*ChangeType, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -9379,7 +9379,7 @@ func (ec *executionContext) unmarshalOChangeType2ᚖgithubᚗcomᚋcodegraphᚑl
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOChangeType2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, sel ast.SelectionSet, v *ChangeType) graphql.Marshaler {
+func (ec *executionContext) marshalOChangeType2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐChangeType(ctx context.Context, sel ast.SelectionSet, v *ChangeType) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -9404,7 +9404,7 @@ func (ec *executionContext) marshalODateTime2ᚖtimeᚐTime(ctx context.Context,
 	return res
 }
 
-func (ec *executionContext) unmarshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeTypeᚄ(ctx context.Context, v any) ([]models.EdgeType, error) {
+func (ec *executionContext) unmarshalOEdgeType2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeTypeᚄ(ctx context.Context, v any) ([]models.EdgeType, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -9414,7 +9414,7 @@ func (ec *executionContext) unmarshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlab
 	res := make([]models.EdgeType, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNEdgeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeType(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNEdgeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeType(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -9422,7 +9422,7 @@ func (ec *executionContext) unmarshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlab
 	return res, nil
 }
 
-func (ec *executionContext) marshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []models.EdgeType) graphql.Marshaler {
+func (ec *executionContext) marshalOEdgeType2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []models.EdgeType) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -9449,7 +9449,7 @@ func (ec *executionContext) marshalOEdgeType2ᚕgithubᚗcomᚋcodegraphᚑlabs�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNEdgeType2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐEdgeType(ctx, sel, v[i])
+			ret[i] = ec.marshalNEdgeType2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐEdgeType(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9505,7 +9505,7 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) unmarshalOLineageDirection2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageDirection(ctx context.Context, v any) (*LineageDirection, error) {
+func (ec *executionContext) unmarshalOLineageDirection2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageDirection(ctx context.Context, v any) (*LineageDirection, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -9514,14 +9514,14 @@ func (ec *executionContext) unmarshalOLineageDirection2ᚖgithubᚗcomᚋcodegra
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOLineageDirection2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐLineageDirection(ctx context.Context, sel ast.SelectionSet, v *LineageDirection) graphql.Marshaler {
+func (ec *executionContext) marshalOLineageDirection2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐLineageDirection(ctx context.Context, sel ast.SelectionSet, v *LineageDirection) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return v
 }
 
-func (ec *executionContext) marshalOProject2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋinternalᚋapiᚋgraphqlᚐProject(ctx context.Context, sel ast.SelectionSet, v *Project) graphql.Marshaler {
+func (ec *executionContext) marshalOProject2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋinternalᚋapiᚋgraphqlᚐProject(ctx context.Context, sel ast.SelectionSet, v *Project) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -9582,14 +9582,14 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) marshalOSymbol2ᚖgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbol(ctx context.Context, sel ast.SelectionSet, v *models.Symbol) graphql.Marshaler {
+func (ec *executionContext) marshalOSymbol2ᚖgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbol(ctx context.Context, sel ast.SelectionSet, v *models.Symbol) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Symbol(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKindᚄ(ctx context.Context, v any) ([]models.SymbolKind, error) {
+func (ec *executionContext) unmarshalOSymbolKind2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKindᚄ(ctx context.Context, v any) ([]models.SymbolKind, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -9599,7 +9599,7 @@ func (ec *executionContext) unmarshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑl
 	res := make([]models.SymbolKind, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNSymbolKind2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKind(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNSymbolKind2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKind(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -9607,7 +9607,7 @@ func (ec *executionContext) unmarshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑl
 	return res, nil
 }
 
-func (ec *executionContext) marshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKindᚄ(ctx context.Context, sel ast.SelectionSet, v []models.SymbolKind) graphql.Marshaler {
+func (ec *executionContext) marshalOSymbolKind2ᚕgithubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKindᚄ(ctx context.Context, sel ast.SelectionSet, v []models.SymbolKind) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -9634,7 +9634,7 @@ func (ec *executionContext) marshalOSymbolKind2ᚕgithubᚗcomᚋcodegraphᚑlab
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSymbolKind2githubᚗcomᚋcodegraphᚑlabsᚋcodegraphᚋpkgᚋmodelsᚐSymbolKind(ctx, sel, v[i])
+			ret[i] = ec.marshalNSymbolKind2githubᚗcomᚋlatticeᚑlabsᚋlatticeᚋpkgᚋmodelsᚐSymbolKind(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

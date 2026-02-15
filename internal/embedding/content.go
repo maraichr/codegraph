@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // BuildEmbeddingText creates the text representation of a symbol for embedding.

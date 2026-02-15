@@ -8,7 +8,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 
-	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/lattice/internal/config"
 )
 
 const maxBatchSize = 96 // Cohere embed API limit

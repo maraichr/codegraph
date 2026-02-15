@@ -8,12 +8,14 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
+	pgvector_go "github.com/pgvector/pgvector-go"
 
-	"github.com/maraichr/codegraph/internal/auth"
-	"github.com/maraichr/codegraph/internal/mcp"
-	"github.com/maraichr/codegraph/internal/mcp/session"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/auth"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/mcp"
+	"github.com/maraichr/lattice/internal/mcp/session"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // ExtractSubgraphParams are the parameters for the extract_subgraph tool.
@@ -33,14 +35,15 @@ type ExtractSubgraphParams struct {
 
 // ExtractSubgraphHandler implements the extract_subgraph MCP tool.
 type ExtractSubgraphHandler struct {
-	store   *store.Store
-	session *session.Manager
-	logger  *slog.Logger
+	store    *store.Store
+	session  *session.Manager
+	embedder embedding.Embedder
+	logger   *slog.Logger
 }
 
 // NewExtractSubgraphHandler creates a new handler.
-func NewExtractSubgraphHandler(s *store.Store, sm *session.Manager, logger *slog.Logger) *ExtractSubgraphHandler {
-	return &ExtractSubgraphHandler{store: s, session: sm, logger: logger}
+func NewExtractSubgraphHandler(s *store.Store, sm *session.Manager, embedder embedding.Embedder, logger *slog.Logger) *ExtractSubgraphHandler {
+	return &ExtractSubgraphHandler{store: s, session: sm, embedder: embedder, logger: logger}
 }
 
 // Handle executes the subgraph extraction: seed discovery → BFS → boundary → trim → format.
@@ -168,7 +171,7 @@ func (h *ExtractSubgraphHandler) discoverSeeds(ctx context.Context, params Extra
 
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
-		return nil, fmt.Errorf("get project: %w", err)
+		return nil, WrapProjectError(err)
 	}
 	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
 		return nil, fmt.Errorf("access denied to project %s", params.Project)
@@ -192,6 +195,45 @@ func (h *ExtractSubgraphHandler) discoverSeeds(ctx context.Context, params Extra
 			return nil, fmt.Errorf("search symbols: %w", err)
 		}
 		seeds = results
+	}
+
+	// Semantic fallback: if text search returned nothing, try vector search
+	if len(seeds) == 0 && h.embedder != nil && params.Topic != "" {
+		vectors, err := h.embedder.EmbedBatch(ctx, []string{params.Topic}, "search_query")
+		if err == nil && len(vectors) > 0 && len(vectors[0]) > 0 {
+			kinds := params.Kinds
+			if kinds == nil {
+				kinds = []string{}
+			}
+			semResults, err := h.store.SemanticSearch(ctx, postgres.SemanticSearchParams{
+				QueryEmbedding: pgvector_go.NewVector(vectors[0]),
+				ProjectID:      project.ID,
+				Kinds:          kinds,
+				Lim:            5,
+			})
+			if err == nil {
+				for _, r := range semResults {
+					seeds = append(seeds, postgres.Symbol{
+						ID:            r.ID,
+						ProjectID:     r.ProjectID,
+						FileID:        r.FileID,
+						Name:          r.Name,
+						QualifiedName: r.QualifiedName,
+						Kind:          r.Kind,
+						Language:      r.Language,
+						StartLine:     r.StartLine,
+						EndLine:       r.EndLine,
+						StartCol:      r.StartCol,
+						EndCol:        r.EndCol,
+						Signature:     r.Signature,
+						DocComment:    r.DocComment,
+						Metadata:      r.Metadata,
+						CreatedAt:     r.CreatedAt,
+						UpdatedAt:     r.UpdatedAt,
+					})
+				}
+			}
+		}
 	}
 
 	// If no topic but kinds specified, use top symbols by kind as seeds

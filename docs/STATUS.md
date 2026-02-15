@@ -1,6 +1,6 @@
-# CodeGraph Implementation Status
+# Lattice Implementation Status
 
-Tracks what's built vs. planned. See `codegrapspec.md` §20 for the full roadmap.
+Tracks what's built vs. planned. See `latticespec.md` §20 for the full roadmap.
 
 ## Phase 1: Foundation — ✅ COMPLETE
 
@@ -43,7 +43,7 @@ Parser registry: `.sql`, `.asp`, `.pas`, `.dfm`, `.dpr`, `.java`
 
 ## Phase 3–5
 
-See `codegrapspec.md` §20. Next up: .NET Roslyn parser, advanced lineage features.
+See `latticespec.md` §20. Next up: .NET Roslyn parser, advanced lineage features.
 
 ## Legend
 

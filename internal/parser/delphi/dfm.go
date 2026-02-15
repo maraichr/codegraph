@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/lattice/internal/parser"
 )
 
 // DFMComponent represents a component in a DFM file.

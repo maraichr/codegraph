@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // Layer represents an architectural layer classification.
@@ -33,13 +33,14 @@ var dataKinds = map[string]bool{
 var dataNamespacePatterns = []string{
 	"repository", "repositories", "dal", "data", "dao",
 	"persistence", "storage", "database", "db", "store",
-	"dbo", "schema",
+	"dbo", "schema", "entities", "models", "dto",
 }
 
 // businessNamespacePatterns match business-layer namespaces.
 var businessNamespacePatterns = []string{
 	"service", "services", "domain", "core", "business",
 	"usecase", "usecases", "logic", "engine", "manager",
+	"providers", "components", "modules",
 }
 
 // apiNamespacePatterns match API-layer namespaces.
@@ -54,6 +55,7 @@ var infraNamespacePatterns = []string{
 	"config", "configuration", "startup", "infrastructure",
 	"infra", "bootstrap", "setup", "middleware", "filter",
 	"interceptor", "logging", "monitoring",
+	"security", "authentication", "authorization",
 }
 
 // ComputeLayers classifies symbols into architectural layers and persists as metadata.
@@ -143,15 +145,51 @@ func classifyLayer(sym postgres.Symbol) Layer {
 		return LayerInfrastructure
 	}
 
-	// 3. Kind-based hints for app code
+	// 3. Name-suffix heuristics for classes and types
+	if kind == "class" || kind == "type" {
+		if layer := classifyBySuffix(strings.ToLower(sym.Name)); layer != LayerUnknown {
+			return layer
+		}
+	}
+
+	// 4. Kind-based hints for app code
 	switch kind {
 	case "interface":
-		// Interfaces are often cross-cutting
 		return LayerCrossCutting
 	case "enum", "constant":
 		return LayerCrossCutting
 	}
 
+	return LayerUnknown
+}
+
+// classifyBySuffix checks if a class/type name ends with a known architectural suffix.
+func classifyBySuffix(name string) Layer {
+	apiSuffixes := []string{"controller", "handler", "endpoint", "servlet"}
+	dataSuffixes := []string{"repository", "dao", "entity", "model"}
+	businessSuffixes := []string{"service", "manager", "provider", "helper", "factory"}
+	infraSuffixes := []string{"config", "middleware", "startup", "configuration"}
+
+	for _, s := range apiSuffixes {
+		if strings.HasSuffix(name, s) {
+			return LayerAPI
+		}
+	}
+	for _, s := range dataSuffixes {
+		if strings.HasSuffix(name, s) {
+			return LayerData
+		}
+	}
+	for _, s := range businessSuffixes {
+		if strings.HasSuffix(name, s) {
+			return LayerBusiness
+		}
+	}
+	for _, s := range infraSuffixes {
+		if strings.HasSuffix(name, s) {
+			return LayerInfrastructure
+		}
+	}
 	return LayerUnknown
 }
 

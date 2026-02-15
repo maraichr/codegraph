@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/llm"
+	"github.com/maraichr/lattice/internal/llm"
 )
 
 const routerSystemPrompt = `You route codebase questions to tools. Reply with ONLY a JSON object, nothing else.

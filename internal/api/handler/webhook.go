@@ -11,10 +11,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/maraichr/codegraph/internal/ingestion"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/internal/ingestion"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 type WebhookHandler struct {

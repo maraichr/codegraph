@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	pgvector "github.com/pgvector/pgvector-go"
 
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // EmbedSymbols generates and stores embeddings for all symbols in a project

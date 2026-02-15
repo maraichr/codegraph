@@ -21,19 +21,19 @@ func DevModeMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 				TenantID: DefaultTenantID,
 				Scopes: map[string]bool{
 					"openid":           true,
-					"codegraph:read":   true,
-					"codegraph:write":  true,
-					"codegraph:ingest": true,
-					"codegraph:admin":  true,
+					"lattice:read":   true,
+					"lattice:write":  true,
+					"lattice:ingest": true,
+					"lattice:admin":  true,
 				},
 				Roles: map[string]bool{
-					"codegraph_admin":    true,
-					"codegraph_reader":   true,
-					"codegraph_ingestor": true,
+					"lattice_admin":    true,
+					"lattice_reader":   true,
+					"lattice_ingestor": true,
 				},
 				ClientID: "dev",
 				Issuer:   "dev",
-				Email:    "dev@codegraph.dev",
+				Email:    "dev@latticegraph.dev",
 			}
 			ctx := WithPrincipal(r.Context(), p)
 			next.ServeHTTP(w, r.WithContext(ctx))

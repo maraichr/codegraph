@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/maraichr/codegraph/internal/oracle"
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/internal/oracle"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 // OracleHandler serves the Oracle chat endpoint.

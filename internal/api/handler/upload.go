@@ -11,11 +11,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/maraichr/codegraph/internal/ingestion"
-	minioclient "github.com/maraichr/codegraph/internal/store/minio"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
-	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/lattice/internal/ingestion"
+	minioclient "github.com/maraichr/lattice/internal/store/minio"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
+	"github.com/maraichr/lattice/pkg/apierr"
 )
 
 type UploadHandler struct {

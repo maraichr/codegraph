@@ -13,10 +13,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	pgvector "github.com/pgvector/pgvector-go"
 
-	"github.com/maraichr/codegraph/internal/auth"
-	"github.com/maraichr/codegraph/internal/store/postgres"
-	"github.com/maraichr/codegraph/pkg/apierr"
-	"github.com/maraichr/codegraph/pkg/models"
+	"github.com/maraichr/lattice/internal/auth"
+	"github.com/maraichr/lattice/internal/store/postgres"
+	"github.com/maraichr/lattice/pkg/apierr"
+	"github.com/maraichr/lattice/pkg/models"
 )
 
 // ID is the resolver for the id field.

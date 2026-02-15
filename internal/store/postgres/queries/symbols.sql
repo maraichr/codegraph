@@ -63,6 +63,20 @@ WHERE (s.name ILIKE '%' || @query || '%' OR s.qualified_name ILIKE '%' || @query
 ORDER BY s.name
 LIMIT @lim;
 
+-- name: SearchSymbolsRanked :many
+SELECT * FROM symbols
+WHERE project_id = (SELECT id FROM projects WHERE slug = @project_slug)
+  AND (name ILIKE '%' || @query || '%' OR qualified_name ILIKE '%' || @query || '%')
+  AND (cardinality(@kinds::text[]) = 0 OR kind = ANY(@kinds::text[]))
+  AND (cardinality(@languages::text[]) = 0 OR language = ANY(@languages::text[]))
+ORDER BY
+  CASE WHEN lower(name) = lower(@query) THEN 0
+       WHEN lower(qualified_name) = lower(@query) THEN 1
+       WHEN lower(name) LIKE lower(@query) || '%' THEN 2
+       ELSE 3 END,
+  (COALESCE(metadata->>'in_degree', '0'))::int DESC
+LIMIT @lim;
+
 -- name: ListTopSymbolsByKind :many
 SELECT * FROM symbols
 WHERE project_id = (SELECT id FROM projects WHERE slug = @project_slug)

@@ -1,4 +1,4 @@
-# CodeGraph
+# Lattice
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8.svg)](https://go.dev/)
@@ -52,8 +52,8 @@ A semantic codebase indexing engine that extracts, indexes, and exposes rich dep
 
 ```bash
 # Clone the repository
-git clone https://github.com/maraichr/codegraph.git
-cd codegraph
+git clone https://github.com/maraichr/lattice.git
+cd lattice
 
 # Start infrastructure (PostgreSQL, Neo4j, Valkey, MinIO)
 docker compose up -d

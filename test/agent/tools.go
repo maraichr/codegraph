@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"log/slog"
 
-	"github.com/maraichr/codegraph/internal/mcp/session"
-	"github.com/maraichr/codegraph/internal/mcp/tools"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/mcp/session"
+	"github.com/maraichr/lattice/internal/mcp/tools"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 // buildToolsAndDispatch returns the OpenAI tool schemas and a dispatch map for the eval harness.
 func buildToolsAndDispatch(s *store.Store, sm *session.Manager, logger *slog.Logger) ([]openaiTool, map[string]ToolFunc) {
-	subgraphHandler := tools.NewExtractSubgraphHandler(s, sm, logger)
-	askHandler := tools.NewAskCodebaseHandler(s, sm, logger)
+	subgraphHandler := tools.NewExtractSubgraphHandler(s, sm, nil, logger)
+	askHandler := tools.NewAskCodebaseHandler(s, sm, nil, logger)
 
 	schemas := []openaiTool{
 		{

@@ -6,11 +6,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/auth"
-	"github.com/maraichr/codegraph/internal/mcp"
-	"github.com/maraichr/codegraph/internal/mcp/session"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/auth"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/mcp"
+	"github.com/maraichr/lattice/internal/mcp/session"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 // AskCodebaseParams are the parameters for the ask_codebase meta-tool.
@@ -33,11 +34,11 @@ type AskCodebaseHandler struct {
 }
 
 // NewAskCodebaseHandler creates a new intent router handler.
-func NewAskCodebaseHandler(s *store.Store, sm *session.Manager, logger *slog.Logger) *AskCodebaseHandler {
+func NewAskCodebaseHandler(s *store.Store, sm *session.Manager, embedder embedding.Embedder, logger *slog.Logger) *AskCodebaseHandler {
 	return &AskCodebaseHandler{
 		store:    s,
 		session:  sm,
-		subgraph: NewExtractSubgraphHandler(s, sm, logger),
+		subgraph: NewExtractSubgraphHandler(s, sm, embedder, logger),
 		logger:   logger,
 	}
 }
@@ -54,6 +55,8 @@ const (
 	IntentDeps          Intent = "dependencies"
 	IntentRanking       Intent = "ranking"
 	IntentRelationships Intent = "relationships"
+	IntentBridges       Intent = "bridges"
+	IntentAnalytics     Intent = "analytics"
 )
 
 // Handle classifies the question intent and routes to the appropriate tool chain.
@@ -82,6 +85,10 @@ func (h *AskCodebaseHandler) Handle(ctx context.Context, params AskCodebaseParam
 		return h.handleDependencies(ctx, params)
 	case IntentRelationships:
 		return h.handleRelationships(ctx, params)
+	case IntentBridges:
+		return h.handleBridges(ctx, params)
+	case IntentAnalytics:
+		return h.handleAnalytics(ctx, params)
 	default:
 		return h.handleSearch(ctx, params)
 	}
@@ -121,6 +128,28 @@ func classifyIntent(question string) Intent {
 	for _, p := range lineagePatterns {
 		if strings.Contains(q, p) {
 			return IntentLineage
+		}
+	}
+
+	// Bridge patterns (cross-language)
+	bridgePatterns := []string{
+		"cross-language", "bridge", "bridges", "between languages",
+		"polyglot", "multi-language",
+	}
+	for _, p := range bridgePatterns {
+		if strings.Contains(q, p) {
+			return IntentBridges
+		}
+	}
+
+	// Analytics patterns
+	analyticsPatterns := []string{
+		"statistics", "stats", "distribution", "breakdown",
+		"how many", "count", "metrics", "layer", "layers",
+	}
+	for _, p := range analyticsPatterns {
+		if strings.Contains(q, p) {
+			return IntentAnalytics
 		}
 	}
 
@@ -175,7 +204,7 @@ func classifyIntent(question string) Intent {
 func (h *AskCodebaseHandler) handleOverview(ctx context.Context, params AskCodebaseParams) (string, error) {
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
-		return "", fmt.Errorf("get project: %w", err)
+		return "", WrapProjectError(err)
 	}
 	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
 		return "", fmt.Errorf("access denied to project %s", params.Project)
@@ -231,7 +260,7 @@ func (h *AskCodebaseHandler) handleOverview(ctx context.Context, params AskCodeb
 func (h *AskCodebaseHandler) handleRanking(ctx context.Context, params AskCodebaseParams) (string, error) {
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
-		return "", fmt.Errorf("get project: %w", err)
+		return "", WrapProjectError(err)
 	}
 	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
 		return "", fmt.Errorf("access denied to project %s", params.Project)
@@ -287,7 +316,7 @@ func (h *AskCodebaseHandler) handleRanking(ctx context.Context, params AskCodeba
 func (h *AskCodebaseHandler) handleSearch(ctx context.Context, params AskCodebaseParams) (string, error) {
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
-		return "", fmt.Errorf("get project: %w", err)
+		return "", WrapProjectError(err)
 	}
 	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
 		return "", fmt.Errorf("access denied to project %s", params.Project)
@@ -386,6 +415,56 @@ func (h *AskCodebaseHandler) handleRelationships(ctx context.Context, params Ask
 
 func (h *AskCodebaseHandler) handleDependencies(ctx context.Context, params AskCodebaseParams) (string, error) {
 	return h.handleSearch(ctx, params)
+}
+
+func (h *AskCodebaseHandler) handleBridges(ctx context.Context, params AskCodebaseParams) (string, error) {
+	project, err := h.store.GetProject(ctx, params.Project)
+	if err != nil {
+		return "", WrapProjectError(err)
+	}
+	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
+		return "", fmt.Errorf("access denied to project %s", params.Project)
+	}
+
+	rows, err := h.store.GetCrossLanguageBridges(ctx, project.ID)
+	if err != nil {
+		return "", fmt.Errorf("get bridges: %w", err)
+	}
+
+	rb := mcp.NewResponseBuilder(params.MaxResponseTokens)
+	rb.AddHeader(fmt.Sprintf("**Cross-Language Bridges: %s**", project.Name))
+
+	if len(rows) == 0 {
+		rb.AddLine("No cross-language bridges found.")
+		return rb.Finalize(0, 0), nil
+	}
+
+	for _, r := range rows {
+		rb.AddLine(fmt.Sprintf("- **%s → %s** via `%s`: %d edges",
+			r.SourceLanguage, r.TargetLanguage, r.EdgeType, r.EdgeCount))
+	}
+
+	return rb.Finalize(len(rows), len(rows)), nil
+}
+
+func (h *AskCodebaseHandler) handleAnalytics(ctx context.Context, params AskCodebaseParams) (string, error) {
+	q := strings.ToLower(params.Question)
+
+	// Determine the best analytics scope from the question
+	scope := "summary"
+	if strings.Contains(q, "layer") || strings.Contains(q, "layers") {
+		scope = "layers"
+	} else if strings.Contains(q, "language") || strings.Contains(q, "languages") {
+		scope = "languages"
+	} else if strings.Contains(q, "kind") || strings.Contains(q, "kinds") || strings.Contains(q, "type") {
+		scope = "kinds"
+	}
+
+	handler := NewGetProjectAnalyticsHandler(h.store, h.logger)
+	return handler.Handle(ctx, GetProjectAnalyticsParams{
+		Project: params.Project,
+		Scope:   scope,
+	})
 }
 
 // extractKindsFromQuestion infers symbol kinds from natural language question text.

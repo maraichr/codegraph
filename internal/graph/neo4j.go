@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/lattice/internal/config"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 

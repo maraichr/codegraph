@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/maraichr/codegraph/internal/config"
+	"github.com/maraichr/lattice/internal/config"
 )
 
 func TestNewOpenRouterClient_MissingAPIKey(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	StreamName    = "codegraph:ingest"
-	GroupName     = "codegraph-workers"
+	StreamName    = "lattice:ingest"
+	GroupName     = "lattice-workers"
 	MaxRetries    = 3
 	ClaimTimeout  = 5 * time.Minute
 )

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/ingestion/connectors"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/ingestion/connectors"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 // CloneStage fetches source files (ZIP extract, git clone, or S3 sync) into a local work directory.
@@ -33,7 +33,7 @@ func (s *CloneStage) Execute(ctx context.Context, rc *IndexRunContext) error {
 		return fmt.Errorf("get source: %w", err)
 	}
 
-	workDir := filepath.Join(os.TempDir(), "codegraph-ingest", rc.IndexRunID.String())
+	workDir := filepath.Join(os.TempDir(), "lattice-ingest", rc.IndexRunID.String())
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		return fmt.Errorf("create work dir: %w", err)
 	}

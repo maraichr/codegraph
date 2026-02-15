@@ -1,7 +1,7 @@
 services:
   postgres:
     image: pgvector/pgvector:0.8.0-pg17
-    container_name: codegraph-postgres
+    container_name: lattice-postgres
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -18,7 +18,7 @@ services:
 
   neo4j:
     image: neo4j:2026.01-community
-    container_name: codegraph-neo4j
+    container_name: lattice-neo4j
     environment:
       NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
       NEO4J_PLUGINS: '["apoc"]'
@@ -37,7 +37,7 @@ services:
 
   valkey:
     image: valkey/valkey:8.1-alpine
-    container_name: codegraph-valkey
+    container_name: lattice-valkey
     ports:
       - "6379:6379"
     volumes:
@@ -50,7 +50,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: codegraph-minio
+    container_name: lattice-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
@@ -68,13 +68,13 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.6
-    container_name: codegraph-keycloak
+    container_name: lattice-keycloak
     command: start-dev --import-realm --health-enabled=true
     ports:
       - "8081:8081"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
-      - ./keycloak/themes/codegraph:/opt/keycloak/themes/codegraph
+      - ./keycloak/themes/lattice:/opt/keycloak/themes/lattice
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -101,7 +101,7 @@ services:
 
   neo4j-init:
     image: neo4j:2026.01-community
-    container_name: codegraph-neo4j-init
+    container_name: lattice-neo4j-init
     entrypoint: >
       sh -c "cat /import/init.cypher | cypher-shell -a bolt://neo4j:7687 -u ${NEO4J_USER} -p ${NEO4J_PASSWORD}"
     volumes:
@@ -112,7 +112,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
-    container_name: codegraph-minio-init
+    container_name: lattice-minio-init
     entrypoint: >
       sh -c "mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
              mc mb local/${MINIO_BUCKET} --ignore-existing"
@@ -122,7 +122,7 @@ services:
 
   migrate:
     image: migrate/migrate:v4.18.1
-    container_name: codegraph-migrate
+    container_name: lattice-migrate
     volumes:
       - ./migrations/postgres:/migrations
     command: ["-path", "/migrations", "-database", "postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable", "up"]
@@ -132,7 +132,7 @@ services:
 
   api:
     image: golang:1.25
-    container_name: codegraph-api
+    container_name: lattice-api
     working_dir: /app
     env_file:
       - .env
@@ -170,9 +170,9 @@ services:
       OPENROUTER_BASE_URL_EMBEDDINGS: "${OPENROUTER_BASE_URL_EMBEDDINGS:-}"
       OPENROUTER_DIMENSIONS: "${OPENROUTER_DIMENSIONS:-1024}"
       AUTH_ENABLED: "${AUTH_ENABLED:-false}"
-      AUTH_ISSUER_URL: "http://keycloak:8081/realms/codegraph"
-      AUTH_PUBLIC_ISSUER: "http://localhost:8081/realms/codegraph"
-      AUTH_AUDIENCE: "${AUTH_AUDIENCE:-codegraph}"
+      AUTH_ISSUER_URL: "http://keycloak:8081/realms/lattice"
+      AUTH_PUBLIC_ISSUER: "http://localhost:8081/realms/lattice"
+      AUTH_AUDIENCE: "${AUTH_AUDIENCE:-lattice}"
       ORACLE_ENABLED: "${ORACLE_ENABLED:-false}"
       ORACLE_MODEL: "${ORACLE_MODEL:-minimax/minimax-m1}"
     depends_on:
@@ -193,7 +193,7 @@ services:
 
   worker:
     image: golang:1.25
-    container_name: codegraph-worker
+    container_name: lattice-worker
     working_dir: /app
     env_file:
       - .env
@@ -239,11 +239,65 @@ services:
       minio-init:
         condition: service_completed_successfully
 
+  mcp:
+    image: golang:1.25
+    container_name: lattice-mcp
+    working_dir: /app
+    env_file:
+      - .env
+    command: >
+      sh -c "go install github.com/air-verse/air@latest && air -c .air.mcp.toml"
+    ports:
+      - "8090:8090"
+    volumes:
+      - .:/app
+      - gomodcache:/go/pkg/mod
+      - gobuildcache:/root/.cache/go-build
+    environment:
+      MCP_ADDR: ":8090"
+      MCP_BASE_URL: "https://localhost:8443"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_SSLMODE: disable
+      VALKEY_ADDR: valkey:6379
+      AUTH_ENABLED: "false"
+      AUTH_ISSUER_URL: "http://keycloak:8081/realms/lattice"
+      AUTH_PUBLIC_ISSUER: "http://localhost:8081/realms/lattice"
+      AUTH_AUDIENCE: "${AUTH_AUDIENCE:-lattice}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_MODEL: "${OPENROUTER_MODEL:-}"
+      OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-}"
+      OPENROUTER_BASE_URL_EMBEDDINGS: "${OPENROUTER_BASE_URL_EMBEDDINGS:-}"
+      OPENROUTER_DIMENSIONS: "${OPENROUTER_DIMENSIONS:-1024}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: lattice-caddy
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+    depends_on:
+      - mcp
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: codegraph-frontend
+    container_name: lattice-frontend
     ports:
       - "3000:3000"
     volumes:
@@ -254,8 +308,8 @@ services:
       VITE_API_TARGET: "http://api:8080"
       VITE_API_BASE_URL: "http://localhost:8080"
       VITE_AUTH_ENABLED: "${AUTH_ENABLED:-false}"
-      VITE_AUTH_AUTHORITY: "http://localhost:8081/realms/codegraph"
-      VITE_AUTH_CLIENT_ID: "codegraph-public"
+      VITE_AUTH_AUTHORITY: "http://localhost:8081/realms/lattice"
+      VITE_AUTH_CLIENT_ID: "lattice-public"
     depends_on:
       api:
         condition: service_started

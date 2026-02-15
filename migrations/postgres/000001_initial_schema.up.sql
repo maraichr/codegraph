@@ -170,6 +170,6 @@ CREATE INDEX idx_symbol_embeddings_hnsw ON symbol_embeddings
 -- =============================================================================
 
 INSERT INTO users (id, email, name) VALUES
-    ('00000000-0000-0000-0000-000000000001', 'admin@codegraph.dev', 'Admin'),
-    ('00000000-0000-0000-0000-000000000002', 'dev@codegraph.dev', 'Developer')
+    ('00000000-0000-0000-0000-000000000001', 'admin@latticegraph.dev', 'Admin'),
+    ('00000000-0000-0000-0000-000000000002', 'dev@latticegraph.dev', 'Developer')
 ON CONFLICT (email) DO NOTHING;

@@ -3,7 +3,7 @@ package csharp
 import (
 	"testing"
 
-	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/lattice/internal/parser"
 )
 
 func TestBasicClassWithMembers(t *testing.T) {

@@ -16,7 +16,7 @@ resolver:
   filename_template: "{name}.resolvers.go"
 
 autobind:
-  - "github.com/codegraph-labs/codegraph/pkg/models"
+  - "github.com/maraichr/lattice/pkg/models"
 
 models:
   ID:

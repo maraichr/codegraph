@@ -3,11 +3,11 @@ package graphql
 import (
 	"log/slog"
 
-	"github.com/maraichr/codegraph/internal/embedding"
-	"github.com/maraichr/codegraph/internal/graph"
-	"github.com/maraichr/codegraph/internal/impact"
-	"github.com/maraichr/codegraph/internal/lineage"
-	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/lattice/internal/embedding"
+	"github.com/maraichr/lattice/internal/graph"
+	"github.com/maraichr/lattice/internal/impact"
+	"github.com/maraichr/lattice/internal/lineage"
+	"github.com/maraichr/lattice/internal/store"
 )
 
 // Resolver is the root resolver for all GraphQL queries and mutations.

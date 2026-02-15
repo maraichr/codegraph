@@ -14,10 +14,10 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/valkey-io/valkey-go"
 
-	"github.com/maraichr/codegraph/internal/analytics"
-	"github.com/maraichr/codegraph/internal/mcp/session"
-	"github.com/maraichr/codegraph/internal/store"
-	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/lattice/internal/analytics"
+	"github.com/maraichr/lattice/internal/mcp/session"
+	"github.com/maraichr/lattice/internal/store"
+	"github.com/maraichr/lattice/internal/store/postgres"
 )
 
 const evalModel = "minimax/minimax-m2.5"

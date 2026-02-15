@@ -22,8 +22,8 @@ func TestPrincipalContext(t *testing.T) {
 	p := &Principal{
 		Sub:      "user-123",
 		TenantID: uuid.MustParse("00000000-0000-0000-0000-000000000099"),
-		Scopes:   map[string]bool{"codegraph:read": true},
-		Roles:    map[string]bool{"codegraph_admin": true},
+		Scopes:   map[string]bool{"lattice:read": true},
+		Roles:    map[string]bool{"lattice_admin": true},
 	}
 
 	ctx = WithPrincipal(ctx, p)
@@ -42,35 +42,35 @@ func TestPrincipalContext(t *testing.T) {
 func TestHasScope(t *testing.T) {
 	p := &Principal{
 		Scopes: map[string]bool{
-			"codegraph:read":  true,
-			"codegraph:write": true,
+			"lattice:read":  true,
+			"lattice:write": true,
 		},
 	}
 
-	if !p.HasScope("codegraph:read") {
-		t.Error("expected HasScope(codegraph:read) = true")
+	if !p.HasScope("lattice:read") {
+		t.Error("expected HasScope(lattice:read) = true")
 	}
-	if p.HasScope("codegraph:admin") {
-		t.Error("expected HasScope(codegraph:admin) = false")
+	if p.HasScope("lattice:admin") {
+		t.Error("expected HasScope(lattice:admin) = false")
 	}
 }
 
 func TestHasAnyScope(t *testing.T) {
 	p := &Principal{
-		Scopes: map[string]bool{"codegraph:read": true},
+		Scopes: map[string]bool{"lattice:read": true},
 	}
 
-	if !p.HasAnyScope("codegraph:write", "codegraph:read") {
-		t.Error("expected HasAnyScope to match codegraph:read")
+	if !p.HasAnyScope("lattice:write", "lattice:read") {
+		t.Error("expected HasAnyScope to match lattice:read")
 	}
-	if p.HasAnyScope("codegraph:write", "codegraph:admin") {
+	if p.HasAnyScope("lattice:write", "lattice:admin") {
 		t.Error("expected HasAnyScope to return false when none match")
 	}
 }
 
 func TestIsAdmin(t *testing.T) {
-	admin := &Principal{Roles: map[string]bool{"codegraph_admin": true}}
-	reader := &Principal{Roles: map[string]bool{"codegraph_reader": true}}
+	admin := &Principal{Roles: map[string]bool{"lattice_admin": true}}
+	reader := &Principal{Roles: map[string]bool{"lattice_reader": true}}
 
 	if !admin.IsAdmin() {
 		t.Error("expected admin to be admin")
@@ -107,8 +107,8 @@ func TestDevModeMiddleware(t *testing.T) {
 	if !gotPrincipal.IsAdmin() {
 		t.Error("dev mode principal should be admin")
 	}
-	if !gotPrincipal.HasScope("codegraph:read") {
-		t.Error("dev mode principal should have codegraph:read scope")
+	if !gotPrincipal.HasScope("lattice:read") {
+		t.Error("dev mode principal should have lattice:read scope")
 	}
 	if gotPrincipal.TenantID != DefaultTenantID {
 		t.Errorf("got tenant %v, want default %v", gotPrincipal.TenantID, DefaultTenantID)
@@ -117,10 +117,10 @@ func TestDevModeMiddleware(t *testing.T) {
 
 func TestRequireScope_Pass(t *testing.T) {
 	p := &Principal{
-		Scopes: map[string]bool{"codegraph:read": true},
+		Scopes: map[string]bool{"lattice:read": true},
 	}
 
-	mw := RequireScope("codegraph:read")
+	mw := RequireScope("lattice:read")
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -137,10 +137,10 @@ func TestRequireScope_Pass(t *testing.T) {
 
 func TestRequireScope_Fail(t *testing.T) {
 	p := &Principal{
-		Scopes: map[string]bool{"codegraph:read": true},
+		Scopes: map[string]bool{"lattice:read": true},
 	}
 
-	mw := RequireScope("codegraph:write")
+	mw := RequireScope("lattice:write")
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -158,10 +158,10 @@ func TestRequireScope_Fail(t *testing.T) {
 func TestRequireScope_AdminBypass(t *testing.T) {
 	p := &Principal{
 		Scopes: map[string]bool{},
-		Roles:  map[string]bool{"codegraph_admin": true},
+		Roles:  map[string]bool{"lattice_admin": true},
 	}
 
-	mw := RequireScope("codegraph:write")
+	mw := RequireScope("lattice:write")
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -177,7 +177,7 @@ func TestRequireScope_AdminBypass(t *testing.T) {
 }
 
 func TestRequireScope_NoPrincipal(t *testing.T) {
-	mw := RequireScope("codegraph:read")
+	mw := RequireScope("lattice:read")
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))

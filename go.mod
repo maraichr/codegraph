@@ -1,4 +1,4 @@
-module github.com/maraichr/codegraph
+module github.com/maraichr/lattice
 
 go 1.25.0
 

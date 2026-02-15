@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/maraichr/codegraph/internal/analytics"
+	"github.com/maraichr/lattice/internal/analytics"
 )
 
 // AnalyticsStage computes graph analytics after embedding.

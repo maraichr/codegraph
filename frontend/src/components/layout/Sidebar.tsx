@@ -18,7 +18,7 @@ const navItems = [
   { to: "/search", label: "Search", icon: Search },
 ];
 
-function CodeGraphLogo() {
+function LatticeLogo() {
   return (
     <svg
       width="28"
@@ -27,9 +27,9 @@ function CodeGraphLogo() {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="CodeGraph logo"
+      aria-label="Lattice logo"
     >
-      <title>CodeGraph</title>
+      <title>Lattice</title>
       <circle cx="14" cy="6" r="3.5" fill="hsl(185 70% 50%)" />
       <circle cx="6" cy="22" r="3.5" fill="hsl(185 70% 50%)" opacity="0.7" />
       <circle cx="22" cy="22" r="3.5" fill="hsl(185 70% 50%)" opacity="0.5" />
@@ -84,7 +84,7 @@ function AuthenticatedFooter() {
   const roles = realmAccess?.roles?.filter(
     (r) => !r.startsWith("default-roles-") && r !== "offline_access" && r !== "uma_authorization",
   ) ?? [];
-  const isAdmin = roles.includes("codegraph_admin");
+  const isAdmin = roles.includes("lattice_admin");
 
   return (
     <DropdownMenu>
@@ -123,7 +123,7 @@ function AuthenticatedFooter() {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <a
-                href="http://localhost:8081/admin/codegraph/console/"
+                href="http://localhost:8081/admin/lattice/console/"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -155,8 +155,8 @@ export function Sidebar() {
   return (
     <aside className="flex w-64 flex-col border-r border-border bg-background">
       <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-        <CodeGraphLogo />
-        <h1 className="text-lg font-semibold text-foreground tracking-tight">CodeGraph</h1>
+        <LatticeLogo />
+        <h1 className="text-lg font-semibold text-foreground tracking-tight">Lattice</h1>
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => (

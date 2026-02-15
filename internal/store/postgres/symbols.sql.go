@@ -586,3 +586,69 @@ func (q *Queries) SearchSymbolsGlobal(ctx context.Context, arg SearchSymbolsGlob
 	}
 	return items, nil
 }
+
+const searchSymbolsRanked = `-- name: SearchSymbolsRanked :many
+SELECT id, project_id, file_id, name, qualified_name, kind, language, start_line, end_line, start_col, end_col, signature, doc_comment, metadata, created_at, updated_at FROM symbols
+WHERE project_id = (SELECT id FROM projects WHERE slug = $1)
+  AND (name ILIKE '%' || $2 || '%' OR qualified_name ILIKE '%' || $2 || '%')
+  AND (cardinality($3::text[]) = 0 OR kind = ANY($3::text[]))
+  AND (cardinality($4::text[]) = 0 OR language = ANY($4::text[]))
+ORDER BY
+  CASE WHEN lower(name) = lower($2) THEN 0
+       WHEN lower(qualified_name) = lower($2) THEN 1
+       WHEN lower(name) LIKE lower($2) || '%' THEN 2
+       ELSE 3 END,
+  (COALESCE(metadata->>'in_degree', '0'))::int DESC
+LIMIT $5
+`
+
+type SearchSymbolsRankedParams struct {
+	ProjectSlug string   `json:"project_slug"`
+	Query       *string  `json:"query"`
+	Kinds       []string `json:"kinds"`
+	Languages   []string `json:"languages"`
+	Lim         int32    `json:"lim"`
+}
+
+func (q *Queries) SearchSymbolsRanked(ctx context.Context, arg SearchSymbolsRankedParams) ([]Symbol, error) {
+	rows, err := q.db.Query(ctx, searchSymbolsRanked,
+		arg.ProjectSlug,
+		arg.Query,
+		arg.Kinds,
+		arg.Languages,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Symbol{}
+	for rows.Next() {
+		var i Symbol
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.FileID,
+			&i.Name,
+			&i.QualifiedName,
+			&i.Kind,
+			&i.Language,
+			&i.StartLine,
+			&i.EndLine,
+			&i.StartCol,
+			&i.EndCol,
+			&i.Signature,
+			&i.DocComment,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

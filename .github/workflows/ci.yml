@@ -22,13 +22,13 @@ jobs:
       postgres:
         image: pgvector/pgvector:0.8.0-pg17
         env:
-          POSTGRES_USER: codegraph
-          POSTGRES_PASSWORD: codegraph
-          POSTGRES_DB: codegraph
+          POSTGRES_USER: lattice
+          POSTGRES_PASSWORD: lattice
+          POSTGRES_DB: lattice
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U codegraph"
+          --health-cmd "pg_isready -U lattice"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -50,9 +50,9 @@ jobs:
         env:
           DB_HOST: localhost
           DB_PORT: 5432
-          DB_USER: codegraph
-          DB_PASSWORD: codegraph
-          DB_NAME: codegraph
+          DB_USER: lattice
+          DB_PASSWORD: lattice
+          DB_NAME: lattice
           DB_SSLMODE: disable
           VALKEY_ADDR: localhost:6379
 
