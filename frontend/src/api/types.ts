@@ -258,3 +258,95 @@ export interface ParserCoverageRow {
   total_files: number;
   parsed_files: number;
 }
+
+// Oracle types
+
+export interface OracleRequest {
+  question: string;
+  session_id?: string;
+  verbosity?: string;
+}
+
+export interface OracleResponse {
+  session_id: string;
+  tool: string;
+  blocks: OracleBlock[];
+  hints: OracleHint[];
+  meta: OracleResponseMeta;
+}
+
+export interface OracleBlock {
+  type:
+    | "header"
+    | "symbol_list"
+    | "graph"
+    | "table"
+    | "text"
+    | "truncation";
+  data: unknown;
+}
+
+export interface OracleHint {
+  label: string;
+  question: string;
+}
+
+export interface OracleResponseMeta {
+  tool_selected: string;
+  tokens_used?: number;
+  total_results: number;
+  shown: number;
+}
+
+// Oracle block data types
+
+export interface OracleHeaderData {
+  text: string;
+}
+
+export interface OracleSymbolItem {
+  id: string;
+  name: string;
+  qualified_name: string;
+  kind: string;
+  language: string;
+  signature?: string;
+  in_degree?: number;
+  pagerank?: number;
+}
+
+export interface OracleSymbolListData {
+  symbols: OracleSymbolItem[];
+}
+
+export interface OracleGraphNode {
+  id: string;
+  name: string;
+  kind: string;
+  label?: string;
+}
+
+export interface OracleGraphEdge {
+  source: string;
+  target: string;
+  edge_type: string;
+}
+
+export interface OracleGraphData {
+  nodes: OracleGraphNode[];
+  edges: OracleGraphEdge[];
+}
+
+export interface OracleTableData {
+  headers: string[];
+  rows: string[][];
+}
+
+export interface OracleTextData {
+  content: string;
+}
+
+export interface OracleTruncationData {
+  shown: number;
+  total: number;
+}

@@ -18,6 +18,9 @@ import (
 	"github.com/maraichr/codegraph/internal/impact"
 	"github.com/maraichr/codegraph/internal/ingestion"
 	"github.com/maraichr/codegraph/internal/lineage"
+	"github.com/maraichr/codegraph/internal/llm"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/oracle"
 	"github.com/maraichr/codegraph/internal/store"
 	minioclient "github.com/maraichr/codegraph/internal/store/minio"
 	"github.com/maraichr/codegraph/internal/store/postgres"
@@ -106,6 +109,14 @@ func main() {
 		}
 		deps.Verifier = verifier
 		logger.Info("OIDC auth enabled", slog.String("issuer", cfg.Auth.IssuerURL))
+	}
+
+	// Oracle (optional — requires ORACLE_ENABLED=true + OpenRouter API key + Valkey)
+	if cfg.Oracle.Enabled && cfg.OpenRouter.APIKey != "" && vkClient != nil {
+		llmClient := llm.NewClient(cfg.OpenRouter.APIKey, cfg.Oracle.Model, cfg.OpenRouter.BaseURL)
+		sessionMgr := session.NewManager(vkClient)
+		deps.Oracle = oracle.NewEngine(s, sessionMgr, llmClient, graphClient, deps.Impact, logger)
+		logger.Info("oracle enabled", slog.String("model", cfg.Oracle.Model))
 	}
 
 	router := api.NewRouter(logger, s, deps)

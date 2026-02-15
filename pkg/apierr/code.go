@@ -83,6 +83,12 @@ const (
 	CodeForbidden    Code = "FORBIDDEN"
 )
 
+// Oracle errors.
+const (
+	CodeOracleFailed     Code = "ORACLE_FAILED"
+	CodeQuestionRequired Code = "QUESTION_REQUIRED"
+)
+
 // Health errors.
 const (
 	CodeDatabaseNotReady Code = "DATABASE_NOT_READY"

@@ -173,6 +173,8 @@ services:
       AUTH_ISSUER_URL: "http://keycloak:8081/realms/codegraph"
       AUTH_PUBLIC_ISSUER: "http://localhost:8081/realms/codegraph"
       AUTH_AUDIENCE: "${AUTH_AUDIENCE:-codegraph}"
+      ORACLE_ENABLED: "${ORACLE_ENABLED:-false}"
+      ORACLE_MODEL: "${ORACLE_MODEL:-minimax/minimax-m1}"
     depends_on:
       postgres:
         condition: service_healthy

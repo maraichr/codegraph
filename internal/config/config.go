@@ -18,6 +18,13 @@ type Config struct {
 	S3         S3Config
 	MCP        MCPConfig
 	Auth       AuthConfig
+	Oracle     OracleConfig
+}
+
+// OracleConfig holds configuration for the LLM-powered Oracle feature.
+type OracleConfig struct {
+	Model   string // ORACLE_MODEL (default: minimax/minimax-m1)
+	Enabled bool   // ORACLE_ENABLED
 }
 
 type AuthConfig struct {
@@ -155,6 +162,10 @@ func Load() (*Config, error) {
 			IssuerURL:    getEnv("AUTH_ISSUER_URL", ""),
 			PublicIssuer: getEnv("AUTH_PUBLIC_ISSUER", ""),
 			Audience:     getEnv("AUTH_AUDIENCE", "codegraph"),
+		},
+		Oracle: OracleConfig{
+			Model:   getEnv("ORACLE_MODEL", "minimax/minimax-m1"),
+			Enabled: getEnvBool("ORACLE_ENABLED", false),
 		},
 	}
 	return cfg, nil

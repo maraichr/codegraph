@@ -1,4 +1,6 @@
 import { Outlet, useMatch } from "react-router";
+import { OracleFAB } from "../oracle/OracleFAB";
+import { OraclePanel } from "../oracle/OraclePanel";
 import { ToastContainer } from "../ui/ToastContainer";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ProjectTabs } from "./ProjectTabs";
@@ -15,6 +17,8 @@ export function AppShell() {
         {isProjectRoute && <ProjectTabs />}
         <Outlet />
       </main>
+      {isProjectRoute && <OraclePanel />}
+      {isProjectRoute && <OracleFAB />}
       <ToastContainer />
     </div>
   );
