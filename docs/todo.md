@@ -9,6 +9,10 @@
 - [x] **Phase 5: DNN-specific** — Path heuristics for DNN Platform, Providers, Dnn.AdminExperience in migration classification.
 - [x] **Documentation** — codegrapspec §6.6, §7.2, §6.8; ADR-001; this todo.
 
+## MCP server
+
+- [x] **Streamable HTTP transport** — Add MCP Go SDK; start Streamable HTTP listener in `cmd/mcp`; register `extract_subgraph` and `ask_codebase`; config `MCP_ADDR` (default `:8080`); graceful shutdown.
+
 ## Possible follow-ups
 
 - Prefer canonical (non-migration) symbols when resolving FQNs in lineage (symbol metadata `is_migration`).

@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/maraichr/codegraph/internal/config"
 	"github.com/maraichr/codegraph/internal/mcp"
@@ -60,19 +64,64 @@ func main() {
 	extractSubgraph := tools.NewExtractSubgraphHandler(s, mcpServer.Session, logger)
 	askCodebase := tools.NewAskCodebaseHandler(s, mcpServer.Session, logger)
 
-	// Suppress unused warnings — these will be registered with the MCP transport
-	_ = extractSubgraph
-	_ = askCodebase
+	// SDK MCP server and Streamable HTTP transport (only extract_subgraph and ask_codebase
+	// are registered; other spec tools are used internally by ask_codebase or are future work).
+	sdkServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "codegraph", Version: "1.0.0"}, nil)
 
-	logger.Info("starting MCP server (Streamable HTTP transport)")
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "extract_subgraph",
+		Description: "Extract a subgraph of symbols and relationships around a topic or set of seed symbols. Returns symbol cards with metadata, edges, and navigation hints.",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, params *tools.ExtractSubgraphParams) (*sdkmcp.CallToolResult, any, error) {
+		if params == nil {
+			params = &tools.ExtractSubgraphParams{}
+		}
+		result, err := extractSubgraph.Handle(ctx, *params)
+		if err != nil {
+			return &sdkmcp.CallToolResult{
+				IsError: true,
+				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: err.Error()}},
+			}, nil, nil
+		}
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: result}},
+		}, nil, nil
+	})
 
-	// TODO: Start Streamable HTTP transport listener
-	// Register all tool handlers with the transport:
-	// - search_symbols, get_symbol_details, get_dependencies,
-	//   trace_lineage, analyze_impact, get_file_contents, query_graph,
-	//   list_project_overview, find_usages, compare_snapshots,
-	//   extract_subgraph, ask_codebase
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "ask_codebase",
+		Description: "Ask a natural language question about the codebase. Routes to overview, search, ranking, impact analysis, lineage tracing, or subgraph exploration.",
+	}, func(ctx context.Context, req *sdkmcp.CallToolRequest, params *tools.AskCodebaseParams) (*sdkmcp.CallToolResult, any, error) {
+		if params == nil {
+			params = &tools.AskCodebaseParams{}
+		}
+		result, err := askCodebase.Handle(ctx, *params)
+		if err != nil {
+			return &sdkmcp.CallToolResult{
+				IsError: true,
+				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: err.Error()}},
+			}, nil, nil
+		}
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: result}},
+		}, nil, nil
+	})
+
+	handler := sdkmcp.NewStreamableHTTPHandler(func(*http.Request) *sdkmcp.Server { return sdkServer }, nil)
+	httpServer := &http.Server{Addr: cfg.MCP.Addr, Handler: handler}
+
+	go func() {
+		logger.Info("MCP server listening", slog.String("addr", cfg.MCP.Addr))
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("MCP HTTP server error", slog.String("error", err.Error()))
+		}
+	}()
 
 	<-ctx.Done()
+	logger.Info("MCP server shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		logger.Warn("MCP HTTP shutdown", slog.String("error", err.Error()))
+	}
 	logger.Info("MCP server stopped")
 }

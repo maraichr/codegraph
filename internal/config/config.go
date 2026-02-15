@@ -16,6 +16,12 @@ type Config struct {
 	Valkey     ValkeyConfig
 	MinIO      MinIOConfig
 	S3         S3Config
+	MCP        MCPConfig
+}
+
+// MCPConfig holds the MCP server listen configuration.
+type MCPConfig struct {
+	Addr string // Listen address (e.g. ":8080"). Env: MCP_ADDR.
 }
 
 type ServerConfig struct {
@@ -130,6 +136,9 @@ func Load() (*Config, error) {
 			Bucket:   getEnv("S3_BUCKET", ""),
 			Prefix:   getEnv("S3_PREFIX", ""),
 			Endpoint: getEnv("S3_ENDPOINT", ""),
+		},
+		MCP: MCPConfig{
+			Addr: getEnv("MCP_ADDR", ":8080"),
 		},
 	}
 	return cfg, nil
