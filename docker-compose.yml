@@ -3,15 +3,15 @@ services:
     image: pgvector/pgvector:0.8.0-pg17
     container_name: codegraph-postgres
     environment:
-      POSTGRES_USER: codegraph
-      POSTGRES_PASSWORD: codegraph
-      POSTGRES_DB: codegraph
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U codegraph"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,7 +20,7 @@ services:
     image: neo4j:2026.01-community
     container_name: codegraph-neo4j
     environment:
-      NEO4J_AUTH: neo4j/codegraph
+      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
       NEO4J_PLUGINS: '["apoc"]'
     ports:
       - "7474:7474"
@@ -53,8 +53,8 @@ services:
     container_name: codegraph-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: codegraph
-      MINIO_ROOT_PASSWORD: codegraph123
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -70,7 +70,7 @@ services:
     image: neo4j:2026.01-community
     container_name: codegraph-neo4j-init
     entrypoint: >
-      sh -c "cat /import/init.cypher | cypher-shell -a bolt://neo4j:7687 -u neo4j -p codegraph"
+      sh -c "cat /import/init.cypher | cypher-shell -a bolt://neo4j:7687 -u ${NEO4J_USER} -p ${NEO4J_PASSWORD}"
     volumes:
       - ./migrations/neo4j:/import
     depends_on:
@@ -81,8 +81,8 @@ services:
     image: minio/mc:latest
     container_name: codegraph-minio-init
     entrypoint: >
-      sh -c "mc alias set local http://minio:9000 codegraph codegraph123 &&
-             mc mb local/codegraph --ignore-existing"
+      sh -c "mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
+             mc mb local/${MINIO_BUCKET} --ignore-existing"
     depends_on:
       minio:
         condition: service_healthy
@@ -95,8 +95,8 @@ services:
       - .:/app
     command: >
       sh -c "apt-get update -qq && apt-get install -y -qq postgresql-client > /dev/null 2>&1 &&
-             PGPASSWORD=codegraph psql -h postgres -U codegraph -d codegraph -f /app/migrations/postgres/000001_initial_schema.up.sql &&
-             PGPASSWORD=codegraph psql -h postgres -U codegraph -d codegraph -f /app/migrations/postgres/000002_phase3.up.sql"
+             PGPASSWORD=${DB_PASSWORD} psql -h postgres -U ${DB_USER} -d ${DB_NAME} -f /app/migrations/postgres/000001_initial_schema.up.sql &&
+             PGPASSWORD=${DB_PASSWORD} psql -h postgres -U ${DB_USER} -d ${DB_NAME} -f /app/migrations/postgres/000002_phase3.up.sql"
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,19 +118,20 @@ services:
       SERVER_PORT: "8080"
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_USER: codegraph
-      DB_PASSWORD: codegraph
-      DB_NAME: codegraph
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
       DB_SSLMODE: disable
       NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: codegraph
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
       VALKEY_ADDR: valkey:6379
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: codegraph
-      MINIO_SECRET_KEY: codegraph123
-      MINIO_BUCKET: codegraph
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
       MINIO_USE_SSL: "false"
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       BEDROCK_REGION: ""
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       OPENROUTER_MODEL: "${OPENROUTER_MODEL:-}"
@@ -163,18 +164,18 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_USER: codegraph
-      DB_PASSWORD: codegraph
-      DB_NAME: codegraph
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
       DB_SSLMODE: disable
       NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: codegraph
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
       VALKEY_ADDR: valkey:6379
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: codegraph
-      MINIO_SECRET_KEY: codegraph123
-      MINIO_BUCKET: codegraph
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
       MINIO_USE_SSL: "false"
       BEDROCK_REGION: ""
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"

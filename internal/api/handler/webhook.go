@@ -49,7 +49,8 @@ func (h *WebhookHandler) GitLabPush(w http.ResponseWriter, r *http.Request) {
 
 	expectedToken := os.Getenv("WEBHOOK_SECRET")
 	if expectedToken == "" {
-		expectedToken = "codegraph-webhook-secret"
+		writeAPIError(w, h.logger, apierr.MissingAuthToken())
+		return
 	}
 	if subtle.ConstantTimeCompare([]byte(token), []byte(expectedToken)) != 1 {
 		writeAPIError(w, h.logger, apierr.InvalidAuthToken())
