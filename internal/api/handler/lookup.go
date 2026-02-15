@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/store"
 	"github.com/maraichr/codegraph/internal/store/postgres"
 	"github.com/maraichr/codegraph/pkg/apierr"
@@ -39,4 +40,22 @@ func getSourceOr404(w http.ResponseWriter, r *http.Request, logger *slog.Logger,
 		return postgres.Source{}, false
 	}
 	return source, true
+}
+
+// checkTenantAccess verifies that the project belongs to the principal's tenant.
+// Admins bypass the check. Returns true if access is allowed.
+func checkTenantAccess(w http.ResponseWriter, r *http.Request, logger *slog.Logger, project postgres.Project) bool {
+	p, ok := auth.PrincipalFrom(r.Context())
+	if !ok {
+		writeAPIError(w, logger, apierr.Unauthorized("Authentication required"))
+		return false
+	}
+	if p.IsAdmin() {
+		return true
+	}
+	if project.TenantID != p.TenantID {
+		writeAPIError(w, logger, apierr.Forbidden("Access denied to this project"))
+		return false
+	}
+	return true
 }

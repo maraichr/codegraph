@@ -29,6 +29,9 @@ func (h *AnalyticsHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	analytics, err := h.store.GetProjectAnalytics(r.Context(), postgres.GetProjectAnalyticsParams{
 		ProjectID: project.ID,
@@ -61,6 +64,9 @@ func (h *AnalyticsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	stats, err := h.store.GetProjectSymbolStats(r.Context(), project.ID)
 	if err != nil {
@@ -77,6 +83,9 @@ func (h *AnalyticsHandler) Languages(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, ok := getProjectOr404(w, r, h.logger, h.store, slug)
 	if !ok {
+		return
+	}
+	if !checkTenantAccess(w, r, h.logger, project) {
 		return
 	}
 
@@ -97,6 +106,9 @@ func (h *AnalyticsHandler) Kinds(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	rows, err := h.store.GetSymbolCountsByKind(r.Context(), project.ID)
 	if err != nil {
@@ -113,6 +125,9 @@ func (h *AnalyticsHandler) Layers(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, ok := getProjectOr404(w, r, h.logger, h.store, slug)
 	if !ok {
+		return
+	}
+	if !checkTenantAccess(w, r, h.logger, project) {
 		return
 	}
 
@@ -132,6 +147,9 @@ func (h *AnalyticsHandler) LayerSymbols(w http.ResponseWriter, r *http.Request) 
 	layer := chi.URLParam(r, "layer")
 	project, ok := getProjectOr404(w, r, h.logger, h.store, slug)
 	if !ok {
+		return
+	}
+	if !checkTenantAccess(w, r, h.logger, project) {
 		return
 	}
 
@@ -163,6 +181,9 @@ func (h *AnalyticsHandler) TopByInDegree(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	limit := intQuery(r, "limit", 10, 100)
 
@@ -184,6 +205,9 @@ func (h *AnalyticsHandler) TopByPageRank(w http.ResponseWriter, r *http.Request)
 	slug := chi.URLParam(r, "slug")
 	project, ok := getProjectOr404(w, r, h.logger, h.store, slug)
 	if !ok {
+		return
+	}
+	if !checkTenantAccess(w, r, h.logger, project) {
 		return
 	}
 
@@ -209,6 +233,9 @@ func (h *AnalyticsHandler) Bridges(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	rows, err := h.store.GetCrossLanguageBridges(r.Context(), project.ID)
 	if err != nil {
@@ -227,6 +254,9 @@ func (h *AnalyticsHandler) Sources(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	rows, err := h.store.GetSourceSymbolStats(r.Context(), project.ID)
 	if err != nil {
@@ -243,6 +273,9 @@ func (h *AnalyticsHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, ok := getProjectOr404(w, r, h.logger, h.store, slug)
 	if !ok {
+		return
+	}
+	if !checkTenantAccess(w, r, h.logger, project) {
 		return
 	}
 

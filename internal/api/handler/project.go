@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/store"
 	"github.com/maraichr/codegraph/internal/store/postgres"
 	"github.com/maraichr/codegraph/pkg/apierr"
@@ -23,22 +24,25 @@ func NewProjectHandler(logger *slog.Logger, s *store.Store) *ProjectHandler {
 }
 
 func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
+	p, _ := auth.PrincipalFrom(r.Context())
+
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
 
-	projects, err := h.store.ListProjects(r.Context(), postgres.ListProjectsParams{
-		Limit:  int32(limit),
-		Offset: int32(offset),
+	projects, err := h.store.ListProjectsByTenant(r.Context(), postgres.ListProjectsByTenantParams{
+		TenantID: p.TenantID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
 	})
 	if err != nil {
 		writeAPIError(w, h.logger, apierr.ProjectListFailed(err))
 		return
 	}
 
-	total, err := h.store.CountProjects(r.Context())
+	total, err := h.store.CountProjectsByTenant(r.Context(), p.TenantID)
 	if err != nil {
 		writeAPIError(w, h.logger, apierr.ProjectCountFailed(err))
 		return
@@ -57,11 +61,16 @@ func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	writeJSON(w, http.StatusOK, project)
 }
 
 func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
+	p, _ := auth.PrincipalFrom(r.Context())
+
 	var req struct {
 		Name        string  `json:"name"`
 		Slug        string  `json:"slug"`
@@ -85,6 +94,7 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Name:        req.Name,
 		Slug:        req.Slug,
 		Description: req.Description,
+		TenantID:    p.TenantID,
 	})
 	if err != nil {
 		writeAPIError(w, h.logger, apierr.ProjectCreateFailed(err))
@@ -117,6 +127,9 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, current) {
+		return
+	}
 
 	name := current.Name
 	if req.Name != "" {
@@ -144,7 +157,11 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 
-	if _, ok := getProjectOr404(w, r, h.logger, h.store, slug); !ok {
+	project, ok := getProjectOr404(w, r, h.logger, h.store, slug)
+	if !ok {
+		return
+	}
+	if !checkTenantAccess(w, r, h.logger, project) {
 		return
 	}
 

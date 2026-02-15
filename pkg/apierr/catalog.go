@@ -148,6 +148,16 @@ func UploadFailed(cause error) *Error {
 	return Wrap(CodeUploadFailed, http.StatusInternalServerError, "Failed to upload file", cause)
 }
 
+// --- Auth ---
+
+func Unauthorized(msg string) *Error {
+	return New(CodeUnauthorized, http.StatusUnauthorized, msg)
+}
+
+func Forbidden(msg string) *Error {
+	return New(CodeForbidden, http.StatusForbidden, msg)
+}
+
 // --- Webhook ---
 
 func MissingAuthToken() *Error {

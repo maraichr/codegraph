@@ -8,14 +8,14 @@ interface Props {
 }
 
 const COLORS = [
-  "bg-blue-500",
-  "bg-green-500",
-  "bg-yellow-500",
-  "bg-purple-500",
-  "bg-pink-500",
+  "bg-cyan-500",
+  "bg-emerald-500",
+  "bg-amber-500",
+  "bg-violet-500",
+  "bg-rose-500",
   "bg-orange-500",
   "bg-teal-500",
-  "bg-red-500",
+  "bg-fuchsia-500",
 ];
 
 export function LanguageBreakdown({ languages, isLoading }: Props) {
@@ -46,11 +46,11 @@ export function LanguageBreakdown({ languages, isLoading }: Props) {
         <CardTitle className="text-sm">Languages</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex h-3 overflow-hidden rounded-full">
+        <div className="flex h-3 overflow-hidden rounded-full bg-muted">
           {languages.map((lang, i) => (
             <div
               key={lang.language}
-              className={`${COLORS[i % COLORS.length]}`}
+              className={`${COLORS[i % COLORS.length]} transition-all`}
               style={{ width: `${(lang.cnt / total) * 100}%` }}
               title={`${lang.language}: ${lang.cnt}`}
             />

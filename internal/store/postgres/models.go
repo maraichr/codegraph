@@ -52,6 +52,13 @@ type IndexRun struct {
 	CreatedAt      time.Time          `json:"created_at"`
 }
 
+type Membership struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	UserSub   string    `json:"user_sub"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Project struct {
 	ID          uuid.UUID   `json:"id"`
 	Name        string      `json:"name"`
@@ -61,6 +68,7 @@ type Project struct {
 	CreatedBy   pgtype.UUID `json:"created_by"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
+	TenantID    uuid.UUID   `json:"tenant_id"`
 }
 
 type ProjectAnalytic struct {
@@ -130,6 +138,15 @@ type SymbolEmbedding struct {
 	CreatedAt time.Time          `json:"created_at"`
 }
 
+type Tenant struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Settings  []byte    `json:"settings"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type User struct {
 	ID        uuid.UUID `json:"id"`
 	Email     string    `json:"email"`
@@ -137,4 +154,5 @@ type User struct {
 	AvatarUrl *string   `json:"avatar_url"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Sub       *string   `json:"sub"`
 }

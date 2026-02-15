@@ -23,10 +23,21 @@ func (q *Queries) CountProjects(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countProjectsByTenant = `-- name: CountProjectsByTenant :one
+SELECT count(*) FROM projects WHERE tenant_id = $1
+`
+
+func (q *Queries) CountProjectsByTenant(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countProjectsByTenant, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (name, slug, description, created_by)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, slug, description, settings, created_by, created_at, updated_at
+INSERT INTO projects (name, slug, description, created_by, tenant_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, slug, description, settings, created_by, created_at, updated_at, tenant_id
 `
 
 type CreateProjectParams struct {
@@ -34,6 +45,7 @@ type CreateProjectParams struct {
 	Slug        string      `json:"slug"`
 	Description *string     `json:"description"`
 	CreatedBy   pgtype.UUID `json:"created_by"`
+	TenantID    uuid.UUID   `json:"tenant_id"`
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -42,6 +54,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		arg.Slug,
 		arg.Description,
 		arg.CreatedBy,
+		arg.TenantID,
 	)
 	var i Project
 	err := row.Scan(
@@ -53,6 +66,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
@@ -67,7 +81,7 @@ func (q *Queries) DeleteProject(ctx context.Context, slug string) error {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, name, slug, description, settings, created_by, created_at, updated_at FROM projects WHERE slug = $1 LIMIT 1
+SELECT id, name, slug, description, settings, created_by, created_at, updated_at, tenant_id FROM projects WHERE slug = $1 LIMIT 1
 `
 
 func (q *Queries) GetProject(ctx context.Context, slug string) (Project, error) {
@@ -82,12 +96,13 @@ func (q *Queries) GetProject(ctx context.Context, slug string) (Project, error) 
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
-SELECT id, name, slug, description, settings, created_by, created_at, updated_at FROM projects WHERE id = $1 LIMIT 1
+SELECT id, name, slug, description, settings, created_by, created_at, updated_at, tenant_id FROM projects WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (Project, error) {
@@ -102,12 +117,13 @@ func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (Project, er
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, name, slug, description, settings, created_by, created_at, updated_at FROM projects ORDER BY created_at DESC LIMIT $1 OFFSET $2
+SELECT id, name, slug, description, settings, created_by, created_at, updated_at, tenant_id FROM projects ORDER BY created_at DESC LIMIT $1 OFFSET $2
 `
 
 type ListProjectsParams struct {
@@ -133,6 +149,50 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]P
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TenantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectsByTenant = `-- name: ListProjectsByTenant :many
+SELECT id, name, slug, description, settings, created_by, created_at, updated_at, tenant_id FROM projects
+WHERE tenant_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListProjectsByTenantParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
+}
+
+func (q *Queries) ListProjectsByTenant(ctx context.Context, arg ListProjectsByTenantParams) ([]Project, error) {
+	rows, err := q.db.Query(ctx, listProjectsByTenant, arg.TenantID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Project{}
+	for rows.Next() {
+		var i Project
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Settings,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -148,7 +208,7 @@ const updateProject = `-- name: UpdateProject :one
 UPDATE projects
 SET name = $2, description = $3, settings = $4, updated_at = now()
 WHERE slug = $1
-RETURNING id, name, slug, description, settings, created_by, created_at, updated_at
+RETURNING id, name, slug, description, settings, created_by, created_at, updated_at, tenant_id
 `
 
 type UpdateProjectParams struct {
@@ -175,6 +235,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TenantID,
 	)
 	return i, err
 }

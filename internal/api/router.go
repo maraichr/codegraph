@@ -2,6 +2,7 @@ package api
 
 import (
 	"log/slog"
+	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -13,6 +14,7 @@ import (
 	apihandler "github.com/maraichr/codegraph/internal/api/handler"
 	"github.com/maraichr/codegraph/internal/api/graphql"
 	apimw "github.com/maraichr/codegraph/internal/api/middleware"
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/embedding"
 	"github.com/maraichr/codegraph/internal/graph"
 	"github.com/maraichr/codegraph/internal/impact"
@@ -24,12 +26,14 @@ import (
 
 // RouterDeps holds optional dependencies for the router.
 type RouterDeps struct {
-	MinIO   *minioclient.Client
-	Producer *ingestion.Producer
-	Graph   *graph.Client
-	Embed   embedding.Embedder
-	Lineage *lineage.Engine
-	Impact  *impact.Engine
+	MinIO       *minioclient.Client
+	Producer    *ingestion.Producer
+	Graph       *graph.Client
+	Embed       embedding.Embedder
+	Lineage     *lineage.Engine
+	Impact      *impact.Engine
+	Verifier    *auth.Verifier
+	AuthEnabled bool
 }
 
 func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
@@ -42,7 +46,7 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 	r.Use(apimw.CORS)
 	r.Use(chimw.Recoverer)
 
-	// Health checks
+	// Health checks — always unauthenticated
 	health := apihandler.NewHealthHandler(s.Pool())
 	r.Get("/healthz", health.Healthz)
 	r.Get("/readyz", health.Readyz)
@@ -51,45 +55,49 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 		deps = &RouterDeps{}
 	}
 
+	// Select auth middleware
+	authHandler := selectAuthMiddleware(logger, deps)
+
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
-		projects := apihandler.NewProjectHandler(logger, s)
+		r.Use(authHandler)
+
 		r.Route("/projects", func(r chi.Router) {
-			r.Get("/", projects.List)
-			r.Post("/", projects.Create)
+			projects := apihandler.NewProjectHandler(logger, s)
+
+			r.With(auth.RequireScope("codegraph:read")).Get("/", projects.List)
+			r.With(auth.RequireScope("codegraph:write")).Post("/", projects.Create)
 			r.Route("/{slug}", func(r chi.Router) {
-				r.Get("/", projects.Get)
-				r.Put("/", projects.Update)
-				r.Delete("/", projects.Delete)
+				r.With(auth.RequireScope("codegraph:read")).Get("/", projects.Get)
+				r.With(auth.RequireScope("codegraph:write")).Put("/", projects.Update)
+				r.With(auth.RequireScope("codegraph:write")).Delete("/", projects.Delete)
 
 				sources := apihandler.NewSourceHandler(logger, s)
 				r.Route("/sources", func(r chi.Router) {
-					r.Get("/", sources.List)
-					r.Post("/", sources.Create)
+					r.With(auth.RequireScope("codegraph:read")).Get("/", sources.List)
+					r.With(auth.RequireScope("codegraph:write")).Post("/", sources.Create)
 					r.Route("/{sourceID}", func(r chi.Router) {
-						r.Get("/", sources.Get)
-						r.Delete("/", sources.Delete)
+						r.With(auth.RequireScope("codegraph:read")).Get("/", sources.Get)
+						r.With(auth.RequireScope("codegraph:write")).Delete("/", sources.Delete)
 					})
 				})
 
 				indexRuns := apihandler.NewIndexRunHandler(logger, s, deps.Producer)
 				r.Route("/index-runs", func(r chi.Router) {
-					r.Get("/", indexRuns.List)
-					r.Post("/", indexRuns.Trigger)
-					r.Get("/{runID}", indexRuns.Get)
+					r.With(auth.RequireScope("codegraph:read")).Get("/", indexRuns.List)
+					r.With(auth.RequireScope("codegraph:ingest")).Post("/", indexRuns.Trigger)
+					r.With(auth.RequireScope("codegraph:read")).Get("/{runID}", indexRuns.Get)
 				})
 
-				// Symbol search within project
 				symbolsInProject := apihandler.NewSymbolHandler(logger, s, deps.Graph, deps.Lineage, deps.Impact)
-				r.Get("/symbols", symbolsInProject.Search)
+				r.With(auth.RequireScope("codegraph:read")).Get("/symbols", symbolsInProject.Search)
 
-				// Semantic search within project
 				search := apihandler.NewSearchHandler(logger, s, deps.Embed)
-				r.Post("/search/semantic", search.Semantic)
+				r.With(auth.RequireScope("codegraph:read")).Post("/search/semantic", search.Semantic)
 
-				// Analytics
 				analytics := apihandler.NewAnalyticsHandler(logger, s)
 				r.Route("/analytics", func(r chi.Router) {
+					r.Use(auth.RequireScope("codegraph:read"))
 					r.Get("/summary", analytics.Summary)
 					r.Get("/stats", analytics.Stats)
 					r.Get("/languages", analytics.Languages)
@@ -103,17 +111,16 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 					r.Get("/coverage", analytics.Coverage)
 				})
 
-				// Upload (requires MinIO)
 				if deps.MinIO != nil {
 					upload := apihandler.NewUploadHandler(logger, s, deps.MinIO, deps.Producer)
-					r.Post("/upload", upload.Upload)
+					r.With(auth.RequireScope("codegraph:ingest")).Post("/upload", upload.Upload)
 				}
 			})
 		})
 
-		// Symbols
 		symbols := apihandler.NewSymbolHandler(logger, s, deps.Graph, deps.Lineage, deps.Impact)
 		r.Route("/symbols", func(r chi.Router) {
+			r.Use(auth.RequireScope("codegraph:read"))
 			r.Get("/search", symbols.SearchGlobal)
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", symbols.Get)
@@ -124,19 +131,26 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 			})
 		})
 
-		// Webhooks
 		webhooks := apihandler.NewWebhookHandler(logger, s, deps.Producer)
-		r.Post("/webhooks/gitlab/{sourceID}", webhooks.GitLabPush)
+		r.With(auth.RequireScope("codegraph:ingest")).Post("/webhooks/gitlab/{sourceID}", webhooks.GitLabPush)
 	})
 
-	// GraphQL
+	// GraphQL — auth on handler, playground stays open
 	gqlResolver := graphql.NewResolver(logger, s, deps.Graph, deps.Embed, deps.Lineage, deps.Impact)
 	gqlSrv := handler.New(graphql.NewExecutableSchema(graphql.Config{Resolvers: gqlResolver}))
 	gqlSrv.SetErrorPresenter(graphql.ErrorPresenter())
 	gqlSrv.AddTransport(transport.POST{})
 	gqlSrv.Use(extension.Introspection{})
-	r.Handle("/graphql", gqlSrv)
+
+	r.With(authHandler).Handle("/graphql", gqlSrv)
 	r.Get("/graphql/playground", playground.Handler("CodeGraph", "/graphql"))
 
 	return r
+}
+
+func selectAuthMiddleware(logger *slog.Logger, deps *RouterDeps) func(http.Handler) http.Handler {
+	if deps.AuthEnabled && deps.Verifier != nil {
+		return auth.RequireAuth(deps.Verifier, logger)
+	}
+	return auth.DevModeMiddleware(logger)
 }

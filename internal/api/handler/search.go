@@ -57,6 +57,9 @@ func (h *SearchHandler) Semantic(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	// Embed the query text
 	embeddings, err := h.embed.EmbedBatch(r.Context(), []string{req.Query}, "search_query")

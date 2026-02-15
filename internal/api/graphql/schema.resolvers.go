@@ -9,12 +9,14 @@ import (
 	"context"
 	"strings"
 
-	"github.com/maraichr/codegraph/internal/store/postgres"
-	"github.com/maraichr/codegraph/pkg/apierr"
-	"github.com/maraichr/codegraph/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	pgvector "github.com/pgvector/pgvector-go"
+
+	"github.com/maraichr/codegraph/internal/auth"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/pkg/models"
 )
 
 // ID is the resolver for the id field.
@@ -24,10 +26,12 @@ func (r *fileResolver) ID(ctx context.Context, obj *models.File) (string, error)
 
 // CreateProject is the resolver for the createProject field.
 func (r *mutationResolver) CreateProject(ctx context.Context, input CreateProjectInput) (*Project, error) {
+	principal, _ := auth.PrincipalFrom(ctx)
 	p, err := r.Store.CreateProject(ctx, postgres.CreateProjectParams{
 		Name:        input.Name,
 		Slug:        input.Slug,
 		Description: input.Description,
+		TenantID:    principal.TenantID,
 	})
 	if err != nil {
 		return nil, apierr.ProjectCreateFailed(err)
@@ -212,6 +216,8 @@ func (r *projectResolver) EdgeCount(ctx context.Context, obj *Project) (int, err
 
 // Projects is the resolver for the projects field.
 func (r *queryResolver) Projects(ctx context.Context, limit *int, offset *int) (*ProjectConnection, error) {
+	principal, _ := auth.PrincipalFrom(ctx)
+
 	l := int32(20)
 	o := int32(0)
 	if limit != nil {
@@ -221,15 +227,16 @@ func (r *queryResolver) Projects(ctx context.Context, limit *int, offset *int) (
 		o = int32(*offset)
 	}
 
-	projects, err := r.Store.ListProjects(ctx, postgres.ListProjectsParams{
-		Limit:  l,
-		Offset: o,
+	projects, err := r.Store.ListProjectsByTenant(ctx, postgres.ListProjectsByTenantParams{
+		TenantID: principal.TenantID,
+		Limit:    l,
+		Offset:   o,
 	})
 	if err != nil {
 		return nil, apierr.ProjectListFailed(err)
 	}
 
-	total, err := r.Store.CountProjects(ctx)
+	total, err := r.Store.CountProjectsByTenant(ctx, principal.TenantID)
 	if err != nil {
 		return nil, apierr.ProjectCountFailed(err)
 	}
@@ -247,12 +254,17 @@ func (r *queryResolver) Projects(ctx context.Context, limit *int, offset *int) (
 
 // Project is the resolver for the project field.
 func (r *queryResolver) Project(ctx context.Context, slug string) (*Project, error) {
+	principal, _ := auth.PrincipalFrom(ctx)
+
 	p, err := r.Store.GetProject(ctx, slug)
 	if err != nil {
 		if apierr.IsNotFound(err) {
 			return nil, apierr.ProjectNotFound()
 		}
 		return nil, apierr.InternalError(err)
+	}
+	if !principal.IsAdmin() && p.TenantID != principal.TenantID {
+		return nil, apierr.Forbidden("Access denied to this project")
 	}
 	return dbProjectToGQL(p), nil
 }

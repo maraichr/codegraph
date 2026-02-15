@@ -11,6 +11,7 @@ import (
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/config"
 	"github.com/maraichr/codegraph/internal/mcp"
 	"github.com/maraichr/codegraph/internal/mcp/tools"
@@ -106,8 +107,27 @@ func main() {
 		}, nil, nil
 	})
 
-	handler := sdkmcp.NewStreamableHTTPHandler(func(*http.Request) *sdkmcp.Server { return sdkServer }, nil)
-	httpServer := &http.Server{Addr: cfg.MCP.Addr, Handler: handler}
+	sdkHandler := sdkmcp.NewStreamableHTTPHandler(func(*http.Request) *sdkmcp.Server { return sdkServer }, nil)
+
+	// Wrap with auth middleware
+	var mcpHandler http.Handler = sdkHandler
+	if cfg.Auth.Enabled {
+		if cfg.Auth.IssuerURL == "" {
+			logger.Error("AUTH_ENABLED=true but AUTH_ISSUER_URL is empty")
+			os.Exit(1)
+		}
+		verifier, err := auth.NewVerifier(ctx, cfg.Auth.IssuerURL, cfg.Auth.PublicIssuer, cfg.Auth.Audience)
+		if err != nil {
+			logger.Error("failed to init OIDC verifier for MCP", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		mcpHandler = auth.RequireAuth(verifier, logger)(sdkHandler)
+		logger.Info("MCP OIDC auth enabled", slog.String("issuer", cfg.Auth.IssuerURL))
+	} else {
+		mcpHandler = auth.DevModeMiddleware(logger)(sdkHandler)
+	}
+
+	httpServer := &http.Server{Addr: cfg.MCP.Addr, Handler: mcpHandler}
 
 	go func() {
 		logger.Info("MCP server listening", slog.String("addr", cfg.MCP.Addr))

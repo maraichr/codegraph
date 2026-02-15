@@ -8,6 +8,7 @@ import { GraphFilters } from "../components/graph/GraphFilters";
 import { GraphLegend } from "../components/graph/GraphLegend";
 import { GraphToolbar } from "../components/graph/GraphToolbar";
 import { NodeDetail } from "../components/graph/NodeDetail";
+import { Input } from "../components/ui/input";
 
 export function GraphExplorer() {
   const { slug } = useParams<{ slug: string }>();
@@ -43,15 +44,15 @@ export function GraphExplorer() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <div className="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
-        <h2 className="text-lg font-semibold text-gray-900">Graph Explorer</h2>
+      <div className="flex items-center gap-4 border-b border-border bg-card px-4 py-3">
+        <h2 className="text-lg font-semibold text-foreground">Graph Explorer</h2>
         <div className="flex-1">
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search symbols..."
-            className="w-full max-w-md rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="max-w-md"
           />
         </div>
       </div>
@@ -77,8 +78,8 @@ export function GraphExplorer() {
       <div className="flex flex-1 overflow-hidden">
         {/* Search results sidebar */}
         {searchQuery.length >= 2 && searchResults && (
-          <div className="w-64 overflow-y-auto border-r border-gray-200 bg-gray-50 p-2">
-            <p className="mb-2 text-xs font-medium text-gray-500">
+          <div className="w-64 overflow-y-auto border-r border-border bg-muted p-2">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
               {searchResults.count} result{searchResults.count !== 1 ? "s" : ""}
             </p>
             <ul className="space-y-1">
@@ -87,13 +88,13 @@ export function GraphExplorer() {
                   <button
                     type="button"
                     onClick={() => handleSymbolSelect(sym.id)}
-                    className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
-                      selectedSymbolId === sym.id ? "bg-white ring-1 ring-blue-300" : ""
+                    className={`w-full rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent ${
+                      selectedSymbolId === sym.id ? "bg-accent ring-1 ring-primary" : ""
                     }`}
                   >
-                    <div className="font-medium text-gray-900">{sym.name}</div>
-                    <div className="text-gray-500">
-                      <span className="inline-block rounded bg-gray-100 px-1 text-[10px]">
+                    <div className="font-medium text-foreground">{sym.name}</div>
+                    <div className="text-muted-foreground">
+                      <span className="inline-block rounded bg-secondary px-1 text-[10px]">
                         {sym.kind}
                       </span>{" "}
                       {sym.qualified_name}
@@ -115,7 +116,7 @@ export function GraphExplorer() {
               onNodeClick={handleNodeClick}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-gray-400">
+            <div className="flex h-full items-center justify-center text-muted-foreground">
               <p className="text-sm">
                 {selectedSymbolId
                   ? "Loading graph..."
