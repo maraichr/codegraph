@@ -17,17 +17,14 @@ import (
 	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
-func testDSN() string {
-	if dsn := os.Getenv("TEST_DATABASE_URL"); dsn != "" {
-		return dsn
-	}
-	return "postgres://codegraph:codegraph@localhost:5432/codegraph?sslmode=disable"
-}
-
 func setupStore(t *testing.T) *store.Store {
 	t.Helper()
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Fatal("TEST_DATABASE_URL not set")
+	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, testDSN())
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		t.Skipf("postgres not available: %v", err)
 	}

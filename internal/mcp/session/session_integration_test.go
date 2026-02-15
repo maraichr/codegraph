@@ -16,7 +16,7 @@ func setupValkey(t *testing.T) valkey.Client {
 	t.Helper()
 	addr := os.Getenv("TEST_VALKEY_ADDR")
 	if addr == "" {
-		addr = "localhost:6379"
+		t.Fatal("TEST_VALKEY_ADDR not set")
 	}
 	client, err := valkey.NewClient(valkey.ClientOption{
 		InitAddress: []string{addr},

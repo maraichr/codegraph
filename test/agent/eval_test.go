@@ -43,7 +43,7 @@ func setupHarness(t *testing.T) (*Harness, *store.Store, *session.Manager) {
 	// Connect to Postgres
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://codegraph:codegraph@localhost:5432/codegraph?sslmode=disable"
+		t.Fatal("TEST_DATABASE_URL not set")
 	}
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -59,7 +59,7 @@ func setupHarness(t *testing.T) (*Harness, *store.Store, *session.Manager) {
 	// Connect to Valkey
 	valkeyAddr := os.Getenv("TEST_VALKEY_ADDR")
 	if valkeyAddr == "" {
-		valkeyAddr = "localhost:6379"
+		t.Fatal("TEST_VALKEY_ADDR not set")
 	}
 	valkeyClient, err := valkey.NewClient(valkey.ClientOption{
 		InitAddress: []string{valkeyAddr},

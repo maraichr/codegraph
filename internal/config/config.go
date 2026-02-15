@@ -91,17 +91,17 @@ func Load() (*Config, error) {
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnvInt("DB_PORT", 5432),
-			User:     getEnv("DB_USER", "codegraph"),
-			Password: getEnv("DB_PASSWORD", "codegraph"),
-			Name:     getEnv("DB_NAME", "codegraph"),
+			User:     getEnv("DB_USER", ""),
+			Password: getEnv("DB_PASSWORD", ""),
+			Name:     getEnv("DB_NAME", ""),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 			MaxConns: int32(getEnvInt("DB_MAX_CONNS", 25)),
 			MinConns: int32(getEnvInt("DB_MIN_CONNS", 5)),
 		},
 		Neo4j: Neo4jConfig{
 			URI:      getEnv("NEO4J_URI", "bolt://localhost:7687"),
-			User:     getEnv("NEO4J_USER", "neo4j"),
-			Password: getEnv("NEO4J_PASSWORD", "codegraph"),
+			User:     getEnv("NEO4J_USER", ""),
+			Password: getEnv("NEO4J_PASSWORD", ""),
 		},
 		Bedrock: BedrockConfig{
 			Region:  getEnv("BEDROCK_REGION", ""),
@@ -120,9 +120,9 @@ func Load() (*Config, error) {
 		},
 		MinIO: MinIOConfig{
 			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-			AccessKey: getEnv("MINIO_ACCESS_KEY", "codegraph"),
-			SecretKey: getEnv("MINIO_SECRET_KEY", "codegraph123"),
-			Bucket:    getEnv("MINIO_BUCKET", "codegraph"),
+			AccessKey: getEnv("MINIO_ACCESS_KEY", ""),
+			SecretKey: getEnv("MINIO_SECRET_KEY", ""),
+			Bucket:    getEnv("MINIO_BUCKET", ""),
 			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
 		},
 		S3: S3Config{
