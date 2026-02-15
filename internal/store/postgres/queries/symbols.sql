@@ -53,6 +53,16 @@ DELETE FROM symbols WHERE file_id = $1;
 -- name: ListColumnSymbolsByProject :many
 SELECT * FROM symbols WHERE project_id = $1 AND kind = 'column';
 
+-- name: SearchSymbolsGlobal :many
+SELECT s.*, p.slug AS project_slug
+FROM symbols s
+JOIN projects p ON s.project_id = p.id
+WHERE (s.name ILIKE '%' || @query || '%' OR s.qualified_name ILIKE '%' || @query || '%')
+  AND (cardinality(@kinds::text[]) = 0 OR s.kind = ANY(@kinds::text[]))
+  AND (cardinality(@languages::text[]) = 0 OR s.language = ANY(@languages::text[]))
+ORDER BY s.name
+LIMIT @lim;
+
 -- name: ListTopSymbolsByKind :many
 SELECT * FROM symbols
 WHERE project_id = (SELECT id FROM projects WHERE slug = @project_slug)

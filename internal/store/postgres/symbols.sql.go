@@ -7,6 +7,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -494,6 +495,87 @@ func (q *Queries) SearchSymbols(ctx context.Context, arg SearchSymbolsParams) ([
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchSymbolsGlobal = `-- name: SearchSymbolsGlobal :many
+SELECT s.id, s.project_id, s.file_id, s.name, s.qualified_name, s.kind, s.language, s.start_line, s.end_line, s.start_col, s.end_col, s.signature, s.doc_comment, s.metadata, s.created_at, s.updated_at, p.slug AS project_slug
+FROM symbols s
+JOIN projects p ON s.project_id = p.id
+WHERE (s.name ILIKE '%' || $1 || '%' OR s.qualified_name ILIKE '%' || $1 || '%')
+  AND (cardinality($2::text[]) = 0 OR s.kind = ANY($2::text[]))
+  AND (cardinality($3::text[]) = 0 OR s.language = ANY($3::text[]))
+ORDER BY s.name
+LIMIT $4
+`
+
+type SearchSymbolsGlobalParams struct {
+	Query     *string  `json:"query"`
+	Kinds     []string `json:"kinds"`
+	Languages []string `json:"languages"`
+	Lim       int32    `json:"lim"`
+}
+
+type SearchSymbolsGlobalRow struct {
+	ID            uuid.UUID `json:"id"`
+	ProjectID     uuid.UUID `json:"project_id"`
+	FileID        uuid.UUID `json:"file_id"`
+	Name          string    `json:"name"`
+	QualifiedName string    `json:"qualified_name"`
+	Kind          string    `json:"kind"`
+	Language      string    `json:"language"`
+	StartLine     int32     `json:"start_line"`
+	EndLine       int32     `json:"end_line"`
+	StartCol      *int32    `json:"start_col"`
+	EndCol        *int32    `json:"end_col"`
+	Signature     *string   `json:"signature"`
+	DocComment    *string   `json:"doc_comment"`
+	Metadata      []byte    `json:"metadata"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	ProjectSlug   string    `json:"project_slug"`
+}
+
+func (q *Queries) SearchSymbolsGlobal(ctx context.Context, arg SearchSymbolsGlobalParams) ([]SearchSymbolsGlobalRow, error) {
+	rows, err := q.db.Query(ctx, searchSymbolsGlobal,
+		arg.Query,
+		arg.Kinds,
+		arg.Languages,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchSymbolsGlobalRow{}
+	for rows.Next() {
+		var i SearchSymbolsGlobalRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.FileID,
+			&i.Name,
+			&i.QualifiedName,
+			&i.Kind,
+			&i.Language,
+			&i.StartLine,
+			&i.EndLine,
+			&i.StartCol,
+			&i.EndCol,
+			&i.Signature,
+			&i.DocComment,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectSlug,
 		); err != nil {
 			return nil, err
 		}

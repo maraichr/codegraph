@@ -213,6 +213,42 @@ func (h *SymbolHandler) ColumnLineage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+// SearchGlobal finds symbols matching a query across all projects.
+// GET /symbols/search?q=...&kind=...&language=...&limit=20
+func (h *SymbolHandler) SearchGlobal(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		writeAPIError(w, h.logger, apierr.New("QUERY_REQUIRED", http.StatusBadRequest, "Query parameter 'q' is required"))
+		return
+	}
+
+	kinds := parseCSV(r.URL.Query().Get("kind"))
+	if kinds == nil {
+		kinds = []string{}
+	}
+	languages := parseCSV(r.URL.Query().Get("language"))
+	if languages == nil {
+		languages = []string{}
+	}
+	limit := intQuery(r, "limit", 20, 100)
+
+	rows, err := h.store.SearchSymbolsGlobal(r.Context(), postgres.SearchSymbolsGlobalParams{
+		Query:     &q,
+		Kinds:     kinds,
+		Languages: languages,
+		Lim:       int32(limit),
+	})
+	if err != nil {
+		writeAPIError(w, h.logger, apierr.SearchFailed(err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"symbols": rows,
+		"count":   len(rows),
+	})
+}
+
 func parseCSV(s string) []string {
 	if s == "" {
 		return nil

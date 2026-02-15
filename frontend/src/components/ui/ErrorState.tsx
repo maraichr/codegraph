@@ -1,3 +1,6 @@
+import { Button } from "./button";
+import { Card, CardContent } from "./card";
+
 interface Props {
   message: string;
   onRetry?: () => void;
@@ -5,17 +8,15 @@ interface Props {
 
 export function ErrorState({ message, onRetry }: Props) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-      <p className="text-sm text-red-700">{message}</p>
-      {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-3 rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
-        >
-          Retry
-        </button>
-      )}
-    </div>
+    <Card className="border-destructive/50 bg-destructive/5">
+      <CardContent className="p-6 text-center">
+        <p className="text-sm text-destructive">{message}</p>
+        {onRetry && (
+          <Button variant="destructive" size="sm" onClick={onRetry} className="mt-3">
+            Retry
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
 import cytoscape from "cytoscape";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { LineageGraph } from "../../api/types";
 
 const KIND_COLORS: Record<string, string> = {
@@ -16,15 +16,29 @@ const KIND_COLORS: Record<string, string> = {
   package: "#f97316",
 };
 
+export interface CytoscapeGraphHandle {
+  cy: cytoscape.Core | null;
+  fit: () => void;
+}
+
 interface Props {
   graph: LineageGraph | null;
   layout?: string;
   onNodeClick?: (id: string) => void;
 }
 
-export function CytoscapeGraph({ graph, layout = "dagre", onNodeClick }: Props) {
+export const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, Props>(function CytoscapeGraph(
+  { graph, layout = "dagre", onNodeClick },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    cy: cyRef.current,
+    fit: () => cyRef.current?.fit(undefined, 40),
+  }));
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -87,6 +101,21 @@ export function CytoscapeGraph({ graph, layout = "dagre", onNodeClick }: Props) 
       if (onNodeClick) onNodeClick(id);
     });
 
+    cy.on("mouseover", "node", (evt) => {
+      const node = evt.target;
+      const pos = node.renderedPosition();
+      const data = node.data();
+      const parts = [data.label, `Kind: ${data.kind}`, `Language: ${data.language ?? "unknown"}`];
+      if (data.inDegree != null) parts.push(`In-degree: ${data.inDegree}`);
+      if (data.pagerank != null) parts.push(`PageRank: ${Number(data.pagerank).toFixed(4)}`);
+      if (data.layer) parts.push(`Layer: ${data.layer}`);
+      setTooltip({ x: pos.x, y: pos.y - 30, text: parts.join("\n") });
+    });
+
+    cy.on("mouseout", "node", () => {
+      setTooltip(null);
+    });
+
     return () => {
       cy.destroy();
     };
@@ -101,6 +130,7 @@ export function CytoscapeGraph({ graph, layout = "dagre", onNodeClick }: Props) 
     const elements: cytoscape.ElementDefinition[] = [];
 
     for (const node of graph.Nodes) {
+      const meta = node.Metadata as Record<string, unknown> | undefined;
       elements.push({
         data: {
           id: node.ID,
@@ -109,6 +139,9 @@ export function CytoscapeGraph({ graph, layout = "dagre", onNodeClick }: Props) 
           qualifiedName: node.QualifiedName,
           language: node.Language,
           color: KIND_COLORS[node.Kind.toLowerCase()] ?? "#6b7280",
+          inDegree: meta?.in_degree ?? null,
+          pagerank: meta?.pagerank ?? null,
+          layer: meta?.layer ?? null,
         },
       });
     }
@@ -142,10 +175,16 @@ export function CytoscapeGraph({ graph, layout = "dagre", onNodeClick }: Props) 
   }, [graph, layout]);
 
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full"
-      style={{ minHeight: "500px" }}
-    />
+    <div className="relative h-full w-full" style={{ minHeight: "500px" }}>
+      <div ref={containerRef} className="h-full w-full" />
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-50 max-w-xs whitespace-pre rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md"
+          style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}
+        >
+          {tooltip.text}
+        </div>
+      )}
+    </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router";
-import { useSymbolSearch, useImpactAnalysis } from "../api/hooks";
+import { useImpactAnalysis, useSymbolSearch } from "../api/hooks";
 import { ImpactSummary } from "../components/impact/ImpactSummary";
 import { ImpactTree } from "../components/impact/ImpactTree";
 
@@ -19,11 +19,7 @@ export function ImpactAnalysis() {
   const [viewMode, setViewMode] = useState<"tree" | "list">("tree");
 
   const { data: searchResults } = useSymbolSearch(slug ?? "", searchQuery);
-  const { data: impactData } = useImpactAnalysis(
-    selectedSymbolId ?? "",
-    changeType,
-    maxDepth,
-  );
+  const { data: impactData } = useImpactAnalysis(selectedSymbolId ?? "", changeType, maxDepth);
 
   if (!slug) return null;
 
@@ -31,9 +27,7 @@ export function ImpactAnalysis() {
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Header */}
       <div className="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Impact Analysis
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Impact Analysis</h2>
         <div className="flex-1">
           <input
             type="text"
@@ -48,9 +42,7 @@ export function ImpactAnalysis() {
       {/* Controls */}
       <div className="flex items-center gap-4 border-b border-gray-200 bg-gray-50 px-4 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-600">
-            Change Type:
-          </span>
+          <span className="text-xs font-medium text-gray-600">Change Type:</span>
           <div className="flex rounded-md border border-gray-300">
             {CHANGE_TYPES.map((ct) => (
               <button
@@ -139,9 +131,7 @@ export function ImpactAnalysis() {
                       setSelectedSymbolId(sym.id);
                     }}
                     className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
-                      selectedSymbolId === sym.id
-                        ? "bg-white ring-1 ring-blue-300"
-                        : ""
+                      selectedSymbolId === sym.id ? "bg-white ring-1 ring-blue-300" : ""
                     }`}
                   >
                     <div className="font-medium text-gray-900">{sym.name}</div>

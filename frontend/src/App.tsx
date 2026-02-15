@@ -5,6 +5,7 @@ import { ImpactAnalysis } from "./pages/ImpactAnalysis";
 import { LineageExplorer } from "./pages/LineageExplorer";
 import { ProjectDashboard } from "./pages/ProjectDashboard";
 import { ProjectList } from "./pages/ProjectList";
+import { Search } from "./pages/Search";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="projects/:slug/graph" element={<GraphExplorer />} />
         <Route path="projects/:slug/lineage" element={<LineageExplorer />} />
         <Route path="projects/:slug/impact" element={<ImpactAnalysis />} />
+        <Route path="search" element={<Search />} />
       </Route>
     </Routes>
   );

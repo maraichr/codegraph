@@ -213,6 +213,44 @@ func (q *Queries) GetNamespaceStats(ctx context.Context, arg GetNamespaceStatsPa
 	return items, nil
 }
 
+const getParserCoverage = `-- name: GetParserCoverage :many
+SELECT
+    f.source_id,
+    count(DISTINCT f.id) AS total_files,
+    count(DISTINCT s.file_id) AS parsed_files
+FROM files f
+LEFT JOIN symbols s ON f.id = s.file_id
+WHERE f.project_id = $1
+GROUP BY f.source_id
+`
+
+type GetParserCoverageRow struct {
+	SourceID    uuid.UUID `json:"source_id"`
+	TotalFiles  int64     `json:"total_files"`
+	ParsedFiles int64     `json:"parsed_files"`
+}
+
+// Parser coverage: total files vs. files with at least one symbol per source
+func (q *Queries) GetParserCoverage(ctx context.Context, projectID uuid.UUID) ([]GetParserCoverageRow, error) {
+	rows, err := q.db.Query(ctx, getParserCoverage, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetParserCoverageRow{}
+	for rows.Next() {
+		var i GetParserCoverageRow
+		if err := rows.Scan(&i.SourceID, &i.TotalFiles, &i.ParsedFiles); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProjectAnalytics = `-- name: GetProjectAnalytics :one
 SELECT id, project_id, scope, scope_id, analytics, summary, computed_at FROM project_analytics
 WHERE project_id = $1 AND scope = $2 AND scope_id = $3

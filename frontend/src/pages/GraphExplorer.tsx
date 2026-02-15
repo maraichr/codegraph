@@ -1,10 +1,12 @@
-import { useState, useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useParams } from "react-router";
-import { useSymbolSearch, useSymbolLineage } from "../api/hooks";
+import { useSymbolLineage, useSymbolSearch } from "../api/hooks";
 import type { LineageGraph } from "../api/types";
-import { CytoscapeGraph } from "../components/graph/CytoscapeGraph";
-import { GraphToolbar } from "../components/graph/GraphToolbar";
+import { CytoscapeGraph, type CytoscapeGraphHandle } from "../components/graph/CytoscapeGraph";
+import { ExportButton } from "../components/graph/ExportButton";
 import { GraphFilters } from "../components/graph/GraphFilters";
+import { GraphLegend } from "../components/graph/GraphLegend";
+import { GraphToolbar } from "../components/graph/GraphToolbar";
 import { NodeDetail } from "../components/graph/NodeDetail";
 
 export function GraphExplorer() {
@@ -16,6 +18,7 @@ export function GraphExplorer() {
   const [direction, setDirection] = useState("both");
   const [depth, setDepth] = useState(3);
   const [selectedKinds, setSelectedKinds] = useState<string[]>([]);
+  const graphRef = useRef<CytoscapeGraphHandle>(null);
 
   const { data: searchResults } = useSymbolSearch(
     slug ?? "",
@@ -23,11 +26,7 @@ export function GraphExplorer() {
     selectedKinds.length > 0 ? selectedKinds : undefined,
   );
 
-  const { data: lineageData } = useSymbolLineage(
-    selectedSymbolId ?? "",
-    direction,
-    depth,
-  );
+  const { data: lineageData } = useSymbolLineage(selectedSymbolId ?? "", direction, depth);
 
   const graph: LineageGraph | null = lineageData ?? null;
 
@@ -70,8 +69,10 @@ export function GraphExplorer() {
       <GraphToolbar
         layout={layout}
         onLayoutChange={setLayout}
-        onFit={() => {}}
-      />
+        onFit={() => graphRef.current?.fit()}
+      >
+        <ExportButton graphRef={graphRef} />
+      </GraphToolbar>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Search results sidebar */}
@@ -87,9 +88,7 @@ export function GraphExplorer() {
                     type="button"
                     onClick={() => handleSymbolSelect(sym.id)}
                     className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
-                      selectedSymbolId === sym.id
-                        ? "bg-white ring-1 ring-blue-300"
-                        : ""
+                      selectedSymbolId === sym.id ? "bg-white ring-1 ring-blue-300" : ""
                     }`}
                   >
                     <div className="font-medium text-gray-900">{sym.name}</div>
@@ -110,6 +109,7 @@ export function GraphExplorer() {
         <div className="flex-1">
           {graph ? (
             <CytoscapeGraph
+              ref={graphRef}
               graph={graph}
               layout={layout}
               onNodeClick={handleNodeClick}
@@ -126,12 +126,9 @@ export function GraphExplorer() {
         </div>
 
         {/* Node detail panel */}
-        <NodeDetail
-          nodeId={clickedNodeId}
-          graph={graph}
-          onClose={() => setClickedNodeId(null)}
-        />
+        <NodeDetail nodeId={clickedNodeId} graph={graph} onClose={() => setClickedNodeId(null)} />
       </div>
+      {graph && <GraphLegend />}
     </div>
   );
 }

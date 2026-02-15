@@ -16,19 +16,14 @@ export function SourceList({ projectSlug }: Props) {
 
   if (error) {
     return (
-      <ErrorState
-        message={error.message || "Failed to load sources"}
-        onRetry={() => refetch()}
-      />
+      <ErrorState message={error.message || "Failed to load sources"} onRetry={() => refetch()} />
     );
   }
 
   const sources = data?.sources ?? [];
 
   if (sources.length === 0) {
-    return (
-      <p className="text-sm text-gray-500">No sources configured yet.</p>
-    );
+    return <p className="text-sm text-gray-500">No sources configured yet.</p>;
   }
 
   return (

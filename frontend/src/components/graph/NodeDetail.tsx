@@ -1,4 +1,7 @@
+import { X } from "lucide-react";
 import type { LineageGraph, LineageNode } from "../../api/types";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 
 interface Props {
   nodeId: string | null;
@@ -21,51 +24,45 @@ export function NodeDetail({ nodeId, graph, onClose }: Props) {
   };
 
   return (
-    <div className="w-72 overflow-y-auto border-l border-gray-200 bg-white p-4">
+    <div className="w-72 overflow-y-auto border-l bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-900">Symbol Detail</h4>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          x
-        </button>
+        <h4 className="text-sm font-semibold">Symbol Detail</h4>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       <dl className="space-y-2 text-xs">
         <div>
-          <dt className="font-medium text-gray-500">Name</dt>
-          <dd className="font-mono text-gray-900">{node.Name}</dd>
+          <dt className="font-medium text-muted-foreground">Name</dt>
+          <dd className="font-mono">{node.Name}</dd>
         </div>
         <div>
-          <dt className="font-medium text-gray-500">Qualified Name</dt>
-          <dd className="font-mono text-gray-900">{node.QualifiedName}</dd>
+          <dt className="font-medium text-muted-foreground">Qualified Name</dt>
+          <dd className="font-mono">{node.QualifiedName}</dd>
         </div>
         <div>
-          <dt className="font-medium text-gray-500">Kind</dt>
+          <dt className="font-medium text-muted-foreground">Kind</dt>
           <dd>
-            <span className="inline-block rounded bg-gray-100 px-1.5 py-0.5 font-mono">
-              {node.Kind}
-            </span>
+            <Badge variant="outline">{node.Kind}</Badge>
           </dd>
         </div>
         <div>
-          <dt className="font-medium text-gray-500">Language</dt>
-          <dd className="text-gray-900">{node.Language}</dd>
+          <dt className="font-medium text-muted-foreground">Language</dt>
+          <dd>{node.Language}</dd>
         </div>
       </dl>
 
       {incoming.length > 0 && (
         <div className="mt-4">
-          <h5 className="text-xs font-medium text-gray-500">
+          <h5 className="text-xs font-medium text-muted-foreground">
             Incoming ({incoming.length})
           </h5>
           <ul className="mt-1 space-y-1">
-            {incoming.map((e, i) => (
-              <li key={i} className="text-xs text-gray-700">
+            {incoming.map((e) => (
+              <li key={`${e.SourceID}-${e.TargetID}-${e.EdgeType}`} className="text-xs">
                 <span className="font-mono">{getNodeName(e.SourceID)}</span>
-                <span className="mx-1 text-gray-400">{e.EdgeType}</span>
+                <span className="mx-1 text-muted-foreground">{e.EdgeType}</span>
               </li>
             ))}
           </ul>
@@ -74,13 +71,13 @@ export function NodeDetail({ nodeId, graph, onClose }: Props) {
 
       {outgoing.length > 0 && (
         <div className="mt-4">
-          <h5 className="text-xs font-medium text-gray-500">
+          <h5 className="text-xs font-medium text-muted-foreground">
             Outgoing ({outgoing.length})
           </h5>
           <ul className="mt-1 space-y-1">
-            {outgoing.map((e, i) => (
-              <li key={i} className="text-xs text-gray-700">
-                <span className="mx-1 text-gray-400">{e.EdgeType}</span>
+            {outgoing.map((e) => (
+              <li key={`${e.SourceID}-${e.TargetID}-${e.EdgeType}`} className="text-xs">
+                <span className="mx-1 text-muted-foreground">{e.EdgeType}</span>
                 <span className="font-mono">{getNodeName(e.TargetID)}</span>
               </li>
             ))}

@@ -87,6 +87,22 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 				search := apihandler.NewSearchHandler(logger, s, deps.Embed)
 				r.Post("/search/semantic", search.Semantic)
 
+				// Analytics
+				analytics := apihandler.NewAnalyticsHandler(logger, s)
+				r.Route("/analytics", func(r chi.Router) {
+					r.Get("/summary", analytics.Summary)
+					r.Get("/stats", analytics.Stats)
+					r.Get("/languages", analytics.Languages)
+					r.Get("/kinds", analytics.Kinds)
+					r.Get("/layers", analytics.Layers)
+					r.Get("/layers/{layer}", analytics.LayerSymbols)
+					r.Get("/top/in-degree", analytics.TopByInDegree)
+					r.Get("/top/pagerank", analytics.TopByPageRank)
+					r.Get("/bridges", analytics.Bridges)
+					r.Get("/sources", analytics.Sources)
+					r.Get("/coverage", analytics.Coverage)
+				})
+
 				// Upload (requires MinIO)
 				if deps.MinIO != nil {
 					upload := apihandler.NewUploadHandler(logger, s, deps.MinIO, deps.Producer)
@@ -98,6 +114,7 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 		// Symbols
 		symbols := apihandler.NewSymbolHandler(logger, s, deps.Graph, deps.Lineage, deps.Impact)
 		r.Route("/symbols", func(r chi.Router) {
+			r.Get("/search", symbols.SearchGlobal)
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", symbols.Get)
 				r.Get("/references", symbols.References)

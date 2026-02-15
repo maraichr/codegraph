@@ -72,6 +72,11 @@ const (
 	CodeInvalidAuthToken Code = "INVALID_AUTH_TOKEN"
 )
 
+// Analytics errors.
+const (
+	CodeAnalyticsFailed Code = "ANALYTICS_FAILED"
+)
+
 // Health errors.
 const (
 	CodeDatabaseNotReady Code = "DATABASE_NOT_READY"
