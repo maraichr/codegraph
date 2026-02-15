@@ -172,7 +172,7 @@ migrations/     # PostgreSQL and Neo4j schema migrations
 - **Phase 3** ✅ — S3 source type, incremental indexing, column lineage, C# parser
 - **Phase 4+** — .NET Roslyn sidecar, advanced lineage, RBAC
 
-See [docs/STATUS.md](docs/STATUS.md) for detailed implementation tracking.
+See [docs/STATUS.md](docs/STATUS.md) for detailed implementation tracking and [ROADMAP.md](ROADMAP.md) for what's next.
 
 ## License
 
