@@ -12,6 +12,8 @@ import type {
   LanguageCount,
   LayerCount,
   LineageGraph,
+  OracleRequest,
+  OracleResponse,
   ParserCoverageRow,
   Project,
   ProjectListResponse,
@@ -306,5 +308,14 @@ export function useParserCoverage(slug: string) {
     queryFn: () =>
       apiClient.get<ParserCoverageRow[]>(`/api/v1/projects/${slug}/analytics/coverage`),
     enabled: !!slug,
+  });
+}
+
+// Oracle
+
+export function useOracleAsk(slug: string) {
+  return useMutation({
+    mutationFn: (req: OracleRequest) =>
+      apiClient.post<OracleResponse>(`/api/v1/projects/${slug}/oracle`, req),
   });
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/maraichr/codegraph/internal/impact"
 	"github.com/maraichr/codegraph/internal/ingestion"
 	"github.com/maraichr/codegraph/internal/lineage"
+	"github.com/maraichr/codegraph/internal/oracle"
 	minioclient "github.com/maraichr/codegraph/internal/store/minio"
 	"github.com/maraichr/codegraph/internal/store"
 )
@@ -32,6 +33,7 @@ type RouterDeps struct {
 	Embed       embedding.Embedder
 	Lineage     *lineage.Engine
 	Impact      *impact.Engine
+	Oracle      *oracle.Engine
 	Verifier    *auth.Verifier
 	AuthEnabled bool
 }
@@ -110,6 +112,11 @@ func NewRouter(logger *slog.Logger, s *store.Store, deps *RouterDeps) *chi.Mux {
 					r.Get("/sources", analytics.Sources)
 					r.Get("/coverage", analytics.Coverage)
 				})
+
+				if deps.Oracle != nil {
+					oracleH := apihandler.NewOracleHandler(logger, deps.Oracle)
+					r.With(auth.RequireScope("codegraph:read")).Post("/oracle", oracleH.Ask)
+				}
 
 				if deps.MinIO != nil {
 					upload := apihandler.NewUploadHandler(logger, s, deps.MinIO, deps.Producer)
