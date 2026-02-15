@@ -1,5 +1,16 @@
 import { useState } from "react";
 import { useCreateSource } from "../../api/hooks";
+import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 interface Props {
   projectSlug: string;
@@ -12,8 +23,6 @@ export function AddSourceDialog({ projectSlug, open, onClose }: Props) {
   const [sourceType, setSourceType] = useState("git");
   const [connectionUri, setConnectionUri] = useState("");
   const createSource = useCreateSource(projectSlug);
-
-  if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,74 +44,62 @@ export function AddSourceDialog({ projectSlug, open, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900">Add Source</h3>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Source</DialogTitle>
+          <DialogDescription>Connect a code source to this project.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block">
+            <span className="block text-sm font-medium text-foreground">Name</span>
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               required
             />
-          </div>
+          </label>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Type
-            </label>
-            <select
-              value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="git">Git Repository</option>
-              <option value="upload">File Upload</option>
-              <option value="database">Database</option>
-              <option value="filesystem">Filesystem</option>
-            </select>
+            <span className="block text-sm font-medium text-foreground">Type</span>
+            <Select value={sourceType} onValueChange={setSourceType}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="git">Git Repository</SelectItem>
+                <SelectItem value="upload">File Upload</SelectItem>
+                <SelectItem value="database">Database</SelectItem>
+                <SelectItem value="filesystem">Filesystem</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {sourceType === "git" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Repository URL
-              </label>
-              <input
+            <label className="block">
+              <span className="block text-sm font-medium text-foreground">Repository URL</span>
+              <Input
                 type="text"
                 value={connectionUri}
                 onChange={(e) => setConnectionUri(e.target.value)}
                 placeholder="https://gitlab.com/group/repo"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1"
               />
-            </div>
+            </label>
           )}
           {createSource.error && (
-            <p className="text-sm text-red-600">
-              {(createSource.error as Error).message}
-            </p>
+            <p className="text-sm text-destructive">{(createSource.error as Error).message}</p>
           )}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={createSource.isPending}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={createSource.isPending}>
               {createSource.isPending ? "Adding..." : "Add Source"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { useIndexRuns, useTriggerIndexRun } from "../../api/hooks";
 import type { IndexRun } from "../../api/types";
+import { Button } from "../ui/button";
 import { ErrorState } from "../ui/ErrorState";
-import { StatusBadge } from "../ui/StatusBadge";
+import { Skeleton } from "../ui/skeleton";
+import { IndexRunDetail } from "./IndexRunDetail";
+import { IndexRunTimeline } from "./IndexRunTimeline";
 
 interface Props {
   projectSlug: string;
@@ -10,9 +14,15 @@ interface Props {
 export function IndexRunList({ projectSlug }: Props) {
   const { data, isLoading, error, refetch } = useIndexRuns(projectSlug);
   const trigger = useTriggerIndexRun(projectSlug);
+  const [selectedRun, setSelectedRun] = useState<IndexRun | null>(null);
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading index runs...</p>;
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
   }
 
   if (error) {
@@ -29,47 +39,29 @@ export function IndexRunList({ projectSlug }: Props) {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-medium text-gray-700">Index Runs</h4>
-        <button
-          type="button"
-          onClick={() => trigger.mutate(undefined)}
-          disabled={trigger.isPending}
-          className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
+        <h4 className="text-sm font-medium">Index Runs</h4>
+        <Button size="sm" onClick={() => trigger.mutate(undefined)} disabled={trigger.isPending}>
           {trigger.isPending ? "Triggering..." : "Trigger Run"}
-        </button>
+        </Button>
       </div>
 
       {runs.length === 0 ? (
-        <p className="text-sm text-gray-500">No index runs yet.</p>
+        <p className="text-sm text-muted-foreground">No index runs yet.</p>
       ) : (
-        <ul className="divide-y divide-gray-100">
-          {runs.map((run: IndexRun) => (
-            <li key={run.id} className="py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={run.status} />
-                  <span className="text-xs font-mono text-gray-500">
-                    {run.id.slice(0, 8)}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">
-                  {new Date(run.created_at).toLocaleString()}
-                </span>
-              </div>
-              <div className="mt-1 flex gap-4 text-xs text-gray-500">
-                <span>{run.files_processed} files</span>
-                <span>{run.symbols_found} symbols</span>
-                <span>{run.edges_found} edges</span>
-              </div>
-              {run.error_message && (
-                <p className="mt-1 text-xs text-red-600">
-                  {run.error_message}
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <IndexRunTimeline
+            runs={runs}
+            onSelect={setSelectedRun}
+            selectedId={selectedRun?.id ?? null}
+          />
+          {selectedRun ? (
+            <div className="mt-3">
+              <IndexRunDetail run={selectedRun} />
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">Click a dot to view run details</p>
+          )}
+        </>
       )}
     </div>
   );

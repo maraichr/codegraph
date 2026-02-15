@@ -36,14 +36,8 @@ export function ZipUpload({ projectSlug }: Props) {
       >
         {upload.isPending ? "Uploading..." : "Upload ZIP"}
       </button>
-      {upload.error && (
-        <p className="text-sm text-red-600">
-          {(upload.error as Error).message}
-        </p>
-      )}
-      {upload.isSuccess && (
-        <p className="text-sm text-green-600">Upload complete!</p>
-      )}
+      {upload.error && <p className="text-sm text-red-600">{(upload.error as Error).message}</p>}
+      {upload.isSuccess && <p className="text-sm text-green-600">Upload complete!</p>}
     </div>
   );
 }

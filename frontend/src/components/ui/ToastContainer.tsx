@@ -1,4 +1,4 @@
-import { useToastStore, type ToastVariant } from "../../stores/toast";
+import { type ToastVariant, useToastStore } from "../../stores/toast";
 
 const variantClasses: Record<ToastVariant, string> = {
   error: "bg-red-600",

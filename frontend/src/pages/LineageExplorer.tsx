@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { useParams } from "react-router";
 import cytoscape from "cytoscape";
-import { useSymbolSearch, useColumnLineage } from "../api/hooks";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams } from "react-router";
+import { useColumnLineage, useSymbolSearch } from "../api/hooks";
 import type { ColumnLineageGraph, ColumnLineageNode } from "../api/types";
-import { LineageControls } from "../components/lineage/LineageControls";
 import { ColumnNodeTooltip } from "../components/lineage/ColumnNodeTooltip";
+import { LineageControls } from "../components/lineage/LineageControls";
 
 const DERIVATION_STYLES: Record<string, { color: string; style: string }> = {
   direct_copy: { color: "#3b82f6", style: "solid" },
@@ -16,38 +16,22 @@ const DERIVATION_STYLES: Record<string, { color: string; style: string }> = {
   uses_column: { color: "#6b7280", style: "solid" },
 };
 
-const ALL_DERIVATIONS = [
-  "direct_copy",
-  "transform",
-  "aggregate",
-  "filter",
-  "join",
-];
+const ALL_DERIVATIONS = ["direct_copy", "transform", "aggregate", "filter", "join"];
 
 export function LineageExplorer() {
   const { slug } = useParams<{ slug: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
-  const [clickedNode, setClickedNode] = useState<ColumnLineageNode | null>(
-    null,
-  );
+  const [clickedNode, setClickedNode] = useState<ColumnLineageNode | null>(null);
   const [direction, setDirection] = useState("both");
   const [depth, setDepth] = useState(5);
-  const [selectedDerivations, setSelectedDerivations] = useState<string[]>(
-    ALL_DERIVATIONS,
-  );
+  const [selectedDerivations, setSelectedDerivations] = useState<string[]>(ALL_DERIVATIONS);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
 
-  const { data: searchResults } = useSymbolSearch(slug ?? "", searchQuery, [
-    "column",
-  ]);
-  const { data: lineageData } = useColumnLineage(
-    selectedColumnId ?? "",
-    direction,
-    depth,
-  );
+  const { data: searchResults } = useSymbolSearch(slug ?? "", searchQuery, ["column"]);
+  const { data: lineageData } = useColumnLineage(selectedColumnId ?? "", direction, depth);
 
   // Initialize cytoscape
   useEffect(() => {
@@ -164,10 +148,7 @@ export function LineageExplorer() {
     }
 
     for (const edge of graph.edges) {
-      if (
-        selectedDerivations.length > 0 &&
-        !selectedDerivations.includes(edge.derivation_type)
-      ) {
+      if (selectedDerivations.length > 0 && !selectedDerivations.includes(edge.derivation_type)) {
         continue;
       }
 
@@ -219,9 +200,7 @@ export function LineageExplorer() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <div className="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Column Lineage Explorer
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Column Lineage Explorer</h2>
       </div>
 
       <LineageControls
@@ -252,13 +231,9 @@ export function LineageExplorer() {
                 Type at least 2 characters to search columns.
               </p>
             ) : !searchResults ? (
-              <p className="px-2 py-4 text-center text-xs text-gray-400">
-                Searching...
-              </p>
+              <p className="px-2 py-4 text-center text-xs text-gray-400">Searching...</p>
             ) : searchResults.count === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-gray-400">
-                No columns found.
-              </p>
+              <p className="px-2 py-4 text-center text-xs text-gray-400">No columns found.</p>
             ) : (
               <>
                 <p className="mb-2 text-xs font-medium text-gray-500">
@@ -272,17 +247,11 @@ export function LineageExplorer() {
                         type="button"
                         onClick={() => handleColumnSelect(sym.id)}
                         className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
-                          selectedColumnId === sym.id
-                            ? "bg-white ring-1 ring-blue-300"
-                            : ""
+                          selectedColumnId === sym.id ? "bg-white ring-1 ring-blue-300" : ""
                         }`}
                       >
-                        <div className="font-medium text-gray-900">
-                          {sym.name}
-                        </div>
-                        <div className="truncate text-gray-500">
-                          {sym.qualified_name}
-                        </div>
+                        <div className="font-medium text-gray-900">{sym.name}</div>
+                        <div className="truncate text-gray-500">{sym.qualified_name}</div>
                       </button>
                     </li>
                   ))}
@@ -294,11 +263,7 @@ export function LineageExplorer() {
 
         {/* Graph canvas */}
         <div className="relative flex-1">
-          <div
-            ref={containerRef}
-            className="h-full w-full"
-            style={{ minHeight: "500px" }}
-          />
+          <div ref={containerRef} className="h-full w-full" style={{ minHeight: "500px" }} />
           {!lineageData ? (
             <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-400">
               <p className="text-sm">
@@ -309,9 +274,7 @@ export function LineageExplorer() {
             </div>
           ) : lineageData.nodes.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-400">
-              <p className="text-sm">
-                No column lineage found for this column.
-              </p>
+              <p className="text-sm">No column lineage found for this column.</p>
             </div>
           ) : null}
         </div>

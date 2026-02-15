@@ -115,6 +115,7 @@ export interface LineageNode {
   Kind: string;
   Language: string;
   FileID: string;
+  Metadata?: Record<string, unknown>;
 }
 
 export interface LineageEdge {
@@ -186,4 +187,74 @@ export interface ImpactNode {
   severity: "critical" | "high" | "medium" | "low";
   edge_type: string;
   path: string[];
+}
+
+// Phase 4 types — Analytics
+
+export interface ProjectStats {
+  total_symbols: number;
+  language_count: number;
+  kind_count: number;
+  file_count: number;
+}
+
+export interface LanguageCount {
+  language: string;
+  cnt: number;
+}
+
+export interface KindCount {
+  kind: string;
+  cnt: number;
+}
+
+export interface LayerCount {
+  layer: string;
+  cnt: number;
+}
+
+export interface TopSymbol {
+  id: string;
+  name: string;
+  qualified_name: string;
+  kind: string;
+  language: string;
+  in_degree?: number;
+  pagerank?: number;
+}
+
+export interface CrossLanguageBridge {
+  source_language: string;
+  target_language: string;
+  edge_type: string;
+  edge_count: number;
+}
+
+export interface SourceSymbolStats {
+  source_id: string;
+  symbol_count: number;
+  file_count: number;
+  language_count: number;
+  languages: string[];
+  kinds: string[];
+}
+
+export interface GlobalSymbol extends Symbol {
+  project_slug: string;
+}
+
+export interface GlobalSearchResponse {
+  symbols: GlobalSymbol[];
+  count: number;
+}
+
+export interface ProjectSummary {
+  analytics: Record<string, unknown> | null;
+  summary: string | null;
+}
+
+export interface ParserCoverageRow {
+  source_id: string;
+  total_files: number;
+  parsed_files: number;
 }

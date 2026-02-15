@@ -148,6 +148,17 @@ JOIN files f ON s.file_id = f.id
 WHERE s.project_id = $1
 GROUP BY f.source_id;
 
+-- Parser coverage: total files vs. files with at least one symbol per source
+-- name: GetParserCoverage :many
+SELECT
+    f.source_id,
+    count(DISTINCT f.id) AS total_files,
+    count(DISTINCT s.file_id) AS parsed_files
+FROM files f
+LEFT JOIN symbols s ON f.id = s.file_id
+WHERE f.project_id = $1
+GROUP BY f.source_id;
+
 -- Namespace-level stats (extract namespace from qualified_name)
 -- name: GetNamespaceStats :many
 SELECT

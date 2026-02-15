@@ -1,22 +1,19 @@
+import type { BadgeProps } from "./badge";
+import { Badge } from "./badge";
+
 interface Props {
   status: string;
 }
 
-const statusStyles: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  running: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-  cancelled: "bg-gray-100 text-gray-800",
+const statusVariants: Record<string, BadgeProps["variant"]> = {
+  pending: "warning",
+  running: "info",
+  completed: "success",
+  failed: "destructive",
+  cancelled: "secondary",
 };
 
 export function StatusBadge({ status }: Props) {
-  const style = statusStyles[status] ?? "bg-gray-100 text-gray-800";
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${style}`}
-    >
-      {status}
-    </span>
-  );
+  const variant = statusVariants[status] ?? "secondary";
+  return <Badge variant={variant}>{status}</Badge>;
 }

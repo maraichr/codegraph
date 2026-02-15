@@ -18,10 +18,7 @@ export function ProjectList() {
 
   if (error) {
     return (
-      <ErrorState
-        message={error.message || "Failed to load projects"}
-        onRetry={() => refetch()}
-      />
+      <ErrorState message={error.message || "Failed to load projects"} onRetry={() => refetch()} />
     );
   }
 
@@ -54,10 +51,7 @@ export function ProjectList() {
         </div>
       )}
 
-      <CreateProjectDialog
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-      />
+      <CreateProjectDialog open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
   );
 }

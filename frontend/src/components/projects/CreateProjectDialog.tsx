@@ -1,5 +1,15 @@
 import { useState } from "react";
 import { useCreateProject } from "../../api/hooks";
+import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Input } from "../ui/input";
 
 interface Props {
   open: boolean;
@@ -11,8 +21,6 @@ export function CreateProjectDialog({ open, onClose }: Props) {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const createProject = useCreateProject();
-
-  if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,72 +45,57 @@ export function CreateProjectDialog({ open, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Create New Project
-        </h3>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Project</DialogTitle>
+          <DialogDescription>Add a new project to track code dependencies.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block">
+            <span className="block text-sm font-medium text-foreground">Name</span>
+            <Input
               type="text"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1"
               required
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Slug
-            </label>
-            <input
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-foreground">Slug</span>
+            <Input
               type="text"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               pattern="[a-z0-9][a-z0-9-]{1,61}[a-z0-9]"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 font-mono"
               required
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-foreground">Description</span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
-          </div>
+          </label>
           {createProject.error && (
-            <p className="text-sm text-red-600">
-              {(createProject.error as Error).message}
-            </p>
+            <p className="text-sm text-destructive">{(createProject.error as Error).message}</p>
           )}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={createProject.isPending}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={createProject.isPending}>
               {createProject.isPending ? "Creating..." : "Create"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

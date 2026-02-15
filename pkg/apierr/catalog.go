@@ -114,6 +114,12 @@ func EmbeddingFailed(cause error) *Error {
 	return Wrap(CodeEmbeddingFailed, http.StatusInternalServerError, "Embedding generation failed", cause)
 }
 
+// --- Analytics ---
+
+func AnalyticsFailed(cause error) *Error {
+	return Wrap(CodeAnalyticsFailed, http.StatusInternalServerError, "Analytics query failed", cause)
+}
+
 // --- Validation ---
 
 func SlugRequired() *Error {

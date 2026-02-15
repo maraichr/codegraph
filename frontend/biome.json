@@ -18,6 +18,15 @@
       "style": {
         "noNonNullAssertion": "warn",
         "useConst": "error"
+      },
+      "a11y": {
+        "noLabelWithoutControl": {
+          "level": "warn",
+          "options": {
+            "inputComponents": ["Input", "Select", "SelectTrigger"],
+            "labelComponents": []
+          }
+        }
       }
     }
   },
@@ -31,6 +40,11 @@
     "formatter": {
       "quoteStyle": "double",
       "semicolons": "always"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }
