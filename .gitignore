@@ -1,8 +1,8 @@
 # Binaries
 bin/
 tmp/
-mcp
-worker
+/mcp
+/worker
 *.exe
 *.exe~
 *.dll
