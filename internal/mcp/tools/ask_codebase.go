@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/mcp"
 	"github.com/maraichr/codegraph/internal/mcp/session"
 	"github.com/maraichr/codegraph/internal/store"
@@ -176,6 +177,9 @@ func (h *AskCodebaseHandler) handleOverview(ctx context.Context, params AskCodeb
 	if err != nil {
 		return "", fmt.Errorf("get project: %w", err)
 	}
+	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
+		return "", fmt.Errorf("access denied to project %s", params.Project)
+	}
 
 	analytics, err := h.store.GetProjectAnalytics(ctx, postgres.GetProjectAnalyticsParams{
 		ProjectID: project.ID,
@@ -229,6 +233,9 @@ func (h *AskCodebaseHandler) handleRanking(ctx context.Context, params AskCodeba
 	if err != nil {
 		return "", fmt.Errorf("get project: %w", err)
 	}
+	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
+		return "", fmt.Errorf("access denied to project %s", params.Project)
+	}
 
 	// Extract kinds from the question if not explicitly provided
 	kinds := params.Kinds
@@ -281,6 +288,9 @@ func (h *AskCodebaseHandler) handleSearch(ctx context.Context, params AskCodebas
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
 		return "", fmt.Errorf("get project: %w", err)
+	}
+	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
+		return "", fmt.Errorf("access denied to project %s", params.Project)
 	}
 
 	searchTerms := extractSearchTerms(params.Question)

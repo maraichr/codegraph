@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/maraichr/codegraph/internal/api"
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/config"
 	"github.com/maraichr/codegraph/internal/embedding"
 	"github.com/maraichr/codegraph/internal/graph"
@@ -53,6 +54,9 @@ func main() {
 	if err != nil {
 		logger.Warn("neo4j connection failed, lineage queries disabled", slog.String("error", err.Error()))
 	} else {
+		if err := graphClient.EnsureIndexes(ctx); err != nil {
+			logger.Warn("neo4j ensure indexes failed", slog.String("error", err.Error()))
+		}
 		deps.Graph = graphClient
 		deps.Lineage = lineage.NewEngine(s, graphClient, logger)
 		deps.Impact = impact.NewEngine(graphClient, s, logger)
@@ -86,6 +90,22 @@ func main() {
 	} else if embedder != nil {
 		deps.Embed = embedder
 		logger.Info("embeddings enabled", slog.String("provider", fmt.Sprintf("%T", embedder)), slog.String("model", embedder.ModelID()))
+	}
+
+	// Auth (optional — requires AUTH_ENABLED=true + valid issuer URL)
+	deps.AuthEnabled = cfg.Auth.Enabled
+	if cfg.Auth.Enabled {
+		if cfg.Auth.IssuerURL == "" {
+			logger.Error("AUTH_ENABLED=true but AUTH_ISSUER_URL is empty")
+			os.Exit(1)
+		}
+		verifier, err := auth.NewVerifier(ctx, cfg.Auth.IssuerURL, cfg.Auth.PublicIssuer, cfg.Auth.Audience)
+		if err != nil {
+			logger.Error("failed to init OIDC verifier", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		deps.Verifier = verifier
+		logger.Info("OIDC auth enabled", slog.String("issuer", cfg.Auth.IssuerURL))
 	}
 
 	router := api.NewRouter(logger, s, deps)

@@ -39,6 +39,9 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {

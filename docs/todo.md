@@ -13,6 +13,10 @@
 
 - [x] **Streamable HTTP transport** — Add MCP Go SDK; start Streamable HTTP listener in `cmd/mcp`; register `extract_subgraph` and `ask_codebase`; config `MCP_ADDR` (default `:8080`); graceful shutdown.
 
+## Neo4j sync performance
+
+- [x] **Indexes for sync** — Ensure uniqueness constraints on `Symbol(id)` and `File(id)` at startup so MERGE/MATCH by id are indexed; without them, sync can take 10+ minutes instead of ~30s. See `graph.EnsureIndexes()` and `internal/graph/queries.go` (CreateConstraintSymbolID, CreateConstraintFileID).
+
 ## Possible follow-ups
 
 - Prefer canonical (non-migration) symbols when resolving FQNs in lineage (symbol metadata `is_migration`).

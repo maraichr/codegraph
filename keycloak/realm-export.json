@@ -1,0 +1,152 @@
+{
+  "realm": "codegraph",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginTheme": "codegraph",
+  "roles": {
+    "realm": [
+      {
+        "name": "codegraph_admin",
+        "description": "Full admin access to CodeGraph"
+      },
+      {
+        "name": "codegraph_reader",
+        "description": "Read-only access to CodeGraph"
+      },
+      {
+        "name": "codegraph_ingestor",
+        "description": "Ingest/index access to CodeGraph"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "codegraph",
+      "name": "CodeGraph API (Confidential)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "codegraph-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["codegraph-scopes"],
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "codegraph-public",
+      "name": "CodeGraph Frontend (Public PKCE)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5173/*", "http://localhost:8080/*", "http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:5173", "http://localhost:8080", "http://localhost:3000"],
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["codegraph-scopes"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "codegraph-scopes",
+      "description": "CodeGraph API scopes",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "codegraph",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "codegraph-scopes-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "codegraph_scopes",
+            "claim.value": "codegraph:read codegraph:write codegraph:ingest",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@codegraph.dev",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["codegraph_admin", "codegraph_reader", "codegraph_ingestor"],
+      "attributes": {
+        "tenant_id": ["00000000-0000-0000-0000-000000000099"]
+      }
+    }
+  ]
+}

@@ -8,8 +8,8 @@ SELECT * FROM projects WHERE id = $1 LIMIT 1;
 SELECT * FROM projects ORDER BY created_at DESC LIMIT $1 OFFSET $2;
 
 -- name: CreateProject :one
-INSERT INTO projects (name, slug, description, created_by)
-VALUES ($1, $2, $3, $4)
+INSERT INTO projects (name, slug, description, created_by, tenant_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: UpdateProject :one
@@ -23,3 +23,12 @@ DELETE FROM projects WHERE slug = $1;
 
 -- name: CountProjects :one
 SELECT count(*) FROM projects;
+
+-- name: ListProjectsByTenant :many
+SELECT * FROM projects
+WHERE tenant_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountProjectsByTenant :one
+SELECT count(*) FROM projects WHERE tenant_id = $1;

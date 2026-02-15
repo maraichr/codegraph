@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/maraichr/codegraph/internal/auth"
 	"github.com/maraichr/codegraph/internal/mcp"
 	"github.com/maraichr/codegraph/internal/mcp/session"
 	"github.com/maraichr/codegraph/internal/store"
@@ -168,6 +169,9 @@ func (h *ExtractSubgraphHandler) discoverSeeds(ctx context.Context, params Extra
 	project, err := h.store.GetProject(ctx, params.Project)
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
+	}
+	if p, ok := auth.PrincipalFrom(ctx); ok && !p.IsAdmin() && project.TenantID != p.TenantID {
+		return nil, fmt.Errorf("access denied to project %s", params.Project)
 	}
 
 	// Fall back to text search for the topic

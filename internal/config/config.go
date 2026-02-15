@@ -17,6 +17,14 @@ type Config struct {
 	MinIO      MinIOConfig
 	S3         S3Config
 	MCP        MCPConfig
+	Auth       AuthConfig
+}
+
+type AuthConfig struct {
+	Enabled       bool
+	IssuerURL     string // Discovery URL (may be internal, e.g. http://keycloak:8081/realms/codegraph)
+	PublicIssuer  string // Token issuer claim (browser-facing, e.g. http://localhost:8081/realms/codegraph)
+	Audience      string
 }
 
 // MCPConfig holds the MCP server listen configuration.
@@ -73,10 +81,11 @@ type MinIOConfig struct {
 }
 
 type OpenRouterConfig struct {
-	APIKey     string // OPENROUTER_API_KEY
-	Model      string // OPENROUTER_MODEL (default: openai/text-embedding-3-small)
-	BaseURL    string // OPENROUTER_BASE_URL (default: https://openrouter.ai/api/v1/embeddings)
-	Dimensions int    // OPENROUTER_DIMENSIONS (default: 1024, matches DB vector column)
+	APIKey           string // OPENROUTER_API_KEY
+	Model            string // OPENROUTER_MODEL (default: openai/text-embedding-3-small)
+	BaseURL          string // OPENROUTER_BASE_URL (generic; embeddings use BaseURLEmbeddings when set)
+	BaseURLEmbeddings string // OPENROUTER_BASE_URL_EMBEDDINGS (e.g. https://openrouter.ai/api/v1/embeddings)
+	Dimensions       int    // OPENROUTER_DIMENSIONS (default: 1024, matches DB vector column)
 }
 
 type S3Config struct {
@@ -114,10 +123,11 @@ func Load() (*Config, error) {
 			ModelID: getEnv("BEDROCK_MODEL_ID", "cohere.embed-english-v4"),
 		},
 		OpenRouter: OpenRouterConfig{
-			APIKey:     getEnv("OPENROUTER_API_KEY", ""),
-			Model:      getEnv("OPENROUTER_MODEL", ""),
-			BaseURL:    getEnv("OPENROUTER_BASE_URL", ""),
-			Dimensions: getEnvInt("OPENROUTER_DIMENSIONS", 1024),
+			APIKey:           getEnv("OPENROUTER_API_KEY", ""),
+			Model:            getEnv("OPENROUTER_MODEL", ""),
+			BaseURL:          getEnv("OPENROUTER_BASE_URL", ""),
+			BaseURLEmbeddings: getEnv("OPENROUTER_BASE_URL_EMBEDDINGS", ""),
+			Dimensions:       getEnvInt("OPENROUTER_DIMENSIONS", 1024),
 		},
 		Valkey: ValkeyConfig{
 			Addr:     getEnv("VALKEY_ADDR", "localhost:6379"),
@@ -139,6 +149,12 @@ func Load() (*Config, error) {
 		},
 		MCP: MCPConfig{
 			Addr: getEnv("MCP_ADDR", ":8080"),
+		},
+		Auth: AuthConfig{
+			Enabled:      getEnvBool("AUTH_ENABLED", false),
+			IssuerURL:    getEnv("AUTH_ISSUER_URL", ""),
+			PublicIssuer: getEnv("AUTH_PUBLIC_ISSUER", ""),
+			Audience:     getEnv("AUTH_AUDIENCE", "codegraph"),
 		},
 	}
 	return cfg, nil

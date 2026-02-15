@@ -2,6 +2,11 @@ package graph
 
 // Cypher query constants for Neo4j operations.
 const (
+	// CreateConstraintSymbolID ensures Symbol(id) is unique and indexed (required for fast MERGE/MATCH).
+	CreateConstraintSymbolID = `CREATE CONSTRAINT symbol_id IF NOT EXISTS FOR (s:Symbol) REQUIRE s.id IS UNIQUE`
+	// CreateConstraintFileID ensures File(id) is unique and indexed (required for fast MERGE/MATCH).
+	CreateConstraintFileID = `CREATE CONSTRAINT file_id IF NOT EXISTS FOR (f:File) REQUIRE f.id IS UNIQUE`
+
 	// UpsertSymbolNode merges a symbol node by its ID and sets all properties.
 	UpsertSymbolNode = `
 UNWIND $symbols AS sym

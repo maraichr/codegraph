@@ -89,6 +89,9 @@ func (h *SourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	configBytes := []byte("{}")
 	if len(req.Config) > 0 {

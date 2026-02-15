@@ -5,6 +5,7 @@ import { useColumnLineage, useSymbolSearch } from "../api/hooks";
 import type { ColumnLineageGraph, ColumnLineageNode } from "../api/types";
 import { ColumnNodeTooltip } from "../components/lineage/ColumnNodeTooltip";
 import { LineageControls } from "../components/lineage/LineageControls";
+import { Input } from "../components/ui/input";
 
 const DERIVATION_STYLES: Record<string, { color: string; style: string }> = {
   direct_copy: { color: "#3b82f6", style: "solid" },
@@ -45,7 +46,7 @@ export function LineageExplorer() {
           style: {
             label: "data(label)",
             "background-color": "data(color)",
-            color: "#1f2937",
+            color: "#d1d5db",
             "font-size": "10px",
             "text-wrap": "wrap",
             "text-max-width": "80px",
@@ -60,16 +61,16 @@ export function LineageExplorer() {
           selector: "node.table-group",
           style: {
             shape: "round-rectangle",
-            "background-color": "#f3f4f6",
+            "background-color": "hsl(220 15% 16%)",
             "border-width": 1,
-            "border-color": "#d1d5db",
+            "border-color": "hsl(220 15% 25%)",
             "font-weight": "bold",
             "font-size": "11px",
           },
         },
         {
           selector: "node:selected",
-          style: { "border-width": 3, "border-color": "#2563eb" },
+          style: { "border-width": 3, "border-color": "#00c9c9" },
         },
         {
           selector: "node.highlighted",
@@ -83,7 +84,7 @@ export function LineageExplorer() {
             "curve-style": "bezier",
             label: "data(derivationType)",
             "font-size": "8px",
-            color: "#9ca3af",
+            color: "hsl(215 15% 45%)",
           },
         },
         {
@@ -140,7 +141,7 @@ export function LineageExplorer() {
       elements.push({
         data: {
           id: node.id,
-          label: `${node.table_name ? node.table_name + "." : ""}${node.name}`,
+          label: `${node.table_name ? `${node.table_name}.` : ""}${node.name}`,
           color: node.kind === "column" ? "#3b82f6" : "#6b7280",
           nodeData: node,
         },
@@ -199,8 +200,8 @@ export function LineageExplorer() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <div className="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-3">
-        <h2 className="text-lg font-semibold text-gray-900">Column Lineage Explorer</h2>
+      <div className="flex items-center gap-4 border-b border-border bg-card px-4 py-3">
+        <h2 className="text-lg font-semibold text-foreground">Column Lineage Explorer</h2>
       </div>
 
       <LineageControls
@@ -215,28 +216,29 @@ export function LineageExplorer() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Column search sidebar — always visible */}
-        <div className="flex w-72 flex-col border-r border-gray-200 bg-gray-50">
-          <div className="border-b border-gray-200 p-3">
-            <input
+        <div className="flex w-72 flex-col border-r border-border bg-muted">
+          <div className="border-b border-border p-3">
+            <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search columns..."
-              className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {searchQuery.length < 2 ? (
-              <p className="px-2 py-4 text-center text-xs text-gray-400">
+              <p className="px-2 py-4 text-center text-xs text-muted-foreground">
                 Type at least 2 characters to search columns.
               </p>
             ) : !searchResults ? (
-              <p className="px-2 py-4 text-center text-xs text-gray-400">Searching...</p>
+              <p className="px-2 py-4 text-center text-xs text-muted-foreground">Searching...</p>
             ) : searchResults.count === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-gray-400">No columns found.</p>
+              <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                No columns found.
+              </p>
             ) : (
               <>
-                <p className="mb-2 text-xs font-medium text-gray-500">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
                   {searchResults.count} column
                   {searchResults.count !== 1 ? "s" : ""}
                 </p>
@@ -246,12 +248,12 @@ export function LineageExplorer() {
                       <button
                         type="button"
                         onClick={() => handleColumnSelect(sym.id)}
-                        className={`w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white ${
-                          selectedColumnId === sym.id ? "bg-white ring-1 ring-blue-300" : ""
+                        className={`w-full rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent ${
+                          selectedColumnId === sym.id ? "bg-accent ring-1 ring-primary" : ""
                         }`}
                       >
-                        <div className="font-medium text-gray-900">{sym.name}</div>
-                        <div className="truncate text-gray-500">{sym.qualified_name}</div>
+                        <div className="font-medium text-foreground">{sym.name}</div>
+                        <div className="truncate text-muted-foreground">{sym.qualified_name}</div>
                       </button>
                     </li>
                   ))}
@@ -265,7 +267,7 @@ export function LineageExplorer() {
         <div className="relative flex-1">
           <div ref={containerRef} className="h-full w-full" style={{ minHeight: "500px" }} />
           {!lineageData ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-400">
+            <div className="absolute inset-0 flex items-center justify-center bg-card text-muted-foreground">
               <p className="text-sm">
                 {selectedColumnId
                   ? "Loading column lineage..."
@@ -273,7 +275,7 @@ export function LineageExplorer() {
               </p>
             </div>
           ) : lineageData.nodes.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-400">
+            <div className="absolute inset-0 flex items-center justify-center bg-card text-muted-foreground">
               <p className="text-sm">No column lineage found for this column.</p>
             </div>
           ) : null}

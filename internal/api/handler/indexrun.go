@@ -76,6 +76,9 @@ func (h *IndexRunHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !checkTenantAccess(w, r, h.logger, project) {
+		return
+	}
 
 	// Optional source_id from query or body
 	if sid := r.URL.Query().Get("source_id"); sid != "" {

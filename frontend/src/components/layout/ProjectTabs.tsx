@@ -26,7 +26,7 @@ export function ProjectTabs() {
             cn(
               "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
               isActive
-                ? "bg-background text-foreground shadow"
+                ? "bg-background text-foreground shadow-sm shadow-primary/10"
                 : "text-muted-foreground hover:text-foreground",
             )
           }

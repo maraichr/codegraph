@@ -66,6 +66,39 @@ services:
       timeout: 5s
       retries: 5
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.6
+    container_name: codegraph-keycloak
+    command: start-dev --import-realm --health-enabled=true
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+      - ./keycloak/themes/codegraph:/opt/keycloak/themes/codegraph
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      KC_DB_USERNAME: ${DB_USER}
+      KC_DB_PASSWORD: ${DB_PASSWORD}
+      KC_DB_SCHEMA: keycloak
+      KC_HTTP_PORT: "8081"
+      KC_HOSTNAME: "http://localhost:8081"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081; echo -e 'GET /realms/master HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '200' <&3"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
   neo4j-init:
     image: neo4j:2026.01-community
     container_name: codegraph-neo4j-init
@@ -88,15 +121,11 @@ services:
         condition: service_healthy
 
   migrate:
-    image: golang:1.25
+    image: migrate/migrate:v4.18.1
     container_name: codegraph-migrate
-    working_dir: /app
     volumes:
-      - .:/app
-    command: >
-      sh -c "apt-get update -qq && apt-get install -y -qq postgresql-client > /dev/null 2>&1 &&
-             PGPASSWORD=${DB_PASSWORD} psql -h postgres -U ${DB_USER} -d ${DB_NAME} -f /app/migrations/postgres/000001_initial_schema.up.sql &&
-             PGPASSWORD=${DB_PASSWORD} psql -h postgres -U ${DB_USER} -d ${DB_NAME} -f /app/migrations/postgres/000002_phase3.up.sql"
+      - ./migrations/postgres:/migrations
+    command: ["-path", "/migrations", "-database", "postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable", "up"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,6 +134,8 @@ services:
     image: golang:1.25
     container_name: codegraph-api
     working_dir: /app
+    env_file:
+      - .env
     command: >
       sh -c "go install github.com/air-verse/air@latest && air -c .air.api.toml"
     ports:
@@ -136,7 +167,12 @@ services:
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       OPENROUTER_MODEL: "${OPENROUTER_MODEL:-}"
       OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-}"
+      OPENROUTER_BASE_URL_EMBEDDINGS: "${OPENROUTER_BASE_URL_EMBEDDINGS:-}"
       OPENROUTER_DIMENSIONS: "${OPENROUTER_DIMENSIONS:-1024}"
+      AUTH_ENABLED: "${AUTH_ENABLED:-false}"
+      AUTH_ISSUER_URL: "http://keycloak:8081/realms/codegraph"
+      AUTH_PUBLIC_ISSUER: "http://localhost:8081/realms/codegraph"
+      AUTH_AUDIENCE: "${AUTH_AUDIENCE:-codegraph}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,11 +186,15 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
 
   worker:
     image: golang:1.25
     container_name: codegraph-worker
     working_dir: /app
+    env_file:
+      - .env
     command: >
       sh -c "go install github.com/air-verse/air@latest && air -c .air.worker.toml"
     volumes:
@@ -181,6 +221,7 @@ services:
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       OPENROUTER_MODEL: "${OPENROUTER_MODEL:-}"
       OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-}"
+      OPENROUTER_BASE_URL_EMBEDDINGS: "${OPENROUTER_BASE_URL_EMBEDDINGS:-}"
       OPENROUTER_DIMENSIONS: "${OPENROUTER_DIMENSIONS:-1024}"
     depends_on:
       postgres:
@@ -195,6 +236,27 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: codegraph-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/public:/app/public
+    environment:
+      VITE_API_TARGET: "http://api:8080"
+      VITE_API_BASE_URL: "http://localhost:8080"
+      VITE_AUTH_ENABLED: "${AUTH_ENABLED:-false}"
+      VITE_AUTH_AUTHORITY: "http://localhost:8081/realms/codegraph"
+      VITE_AUTH_CLIENT_ID: "codegraph-public"
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   pgdata:

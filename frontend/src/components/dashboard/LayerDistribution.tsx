@@ -8,11 +8,11 @@ interface Props {
 }
 
 const LAYER_COLORS: Record<string, string> = {
-  data: "bg-blue-500",
-  business: "bg-green-500",
-  api: "bg-yellow-500",
-  infrastructure: "bg-purple-500",
-  "cross-cutting": "bg-pink-500",
+  data: "bg-cyan-500",
+  business: "bg-emerald-500",
+  api: "bg-amber-500",
+  infrastructure: "bg-violet-500",
+  "cross-cutting": "bg-rose-500",
 };
 
 export function LayerDistribution({ layers, isLoading }: Props) {
@@ -43,7 +43,7 @@ export function LayerDistribution({ layers, isLoading }: Props) {
       </CardHeader>
       <CardContent className="space-y-3">
         {layers.map((layer) => {
-          const color = LAYER_COLORS[layer.layer] ?? "bg-gray-500";
+          const color = LAYER_COLORS[layer.layer] ?? "bg-secondary";
           const pct = total > 0 ? ((layer.cnt / total) * 100).toFixed(1) : "0";
           return (
             <div key={layer.layer} className="space-y-1">
@@ -55,7 +55,7 @@ export function LayerDistribution({ layers, isLoading }: Props) {
               </div>
               <div className="h-2 rounded-full bg-muted">
                 <div
-                  className={`h-2 rounded-full ${color}`}
+                  className={`h-2 rounded-full ${color} transition-all`}
                   style={{ width: `${(layer.cnt / total) * 100}%` }}
                 />
               </div>

@@ -51,7 +51,7 @@ export const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, Props>(function C
           style: {
             label: "data(label)",
             "background-color": "data(color)",
-            color: "#1f2937",
+            color: "#d1d5db",
             "font-size": "11px",
             "text-wrap": "wrap",
             "text-max-width": "100px",
@@ -65,7 +65,7 @@ export const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, Props>(function C
           selector: "node:selected",
           style: {
             "border-width": 3,
-            "border-color": "#2563eb",
+            "border-color": "#00c9c9",
           },
         },
         {
@@ -73,10 +73,10 @@ export const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, Props>(function C
           style: {
             label: "data(edgeType)",
             "font-size": "9px",
-            color: "#9ca3af",
+            color: "hsl(215 15% 45%)",
             width: 2,
-            "line-color": "#d1d5db",
-            "target-arrow-color": "#9ca3af",
+            "line-color": "hsl(220 15% 30%)",
+            "target-arrow-color": "hsl(220 15% 40%)",
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
           },

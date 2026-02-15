@@ -79,6 +79,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer graphClient.Close(ctx)
+	if err := graphClient.EnsureIndexes(ctx); err != nil {
+		logger.Warn("neo4j ensure indexes failed, sync may be slow", slog.String("error", err.Error()))
+	}
 	logger.Info("connected to neo4j")
 
 	// Connectors

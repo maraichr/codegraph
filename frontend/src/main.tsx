@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App";
+import { AuthGate } from "./auth/AuthGate";
 import "./index.css";
 import { useToastStore } from "./stores/toast";
 
@@ -30,7 +31,9 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <AuthGate>
+          <App />
+        </AuthGate>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

@@ -77,6 +77,12 @@ const (
 	CodeAnalyticsFailed Code = "ANALYTICS_FAILED"
 )
 
+// Auth errors.
+const (
+	CodeUnauthorized Code = "UNAUTHORIZED"
+	CodeForbidden    Code = "FORBIDDEN"
+)
+
 // Health errors.
 const (
 	CodeDatabaseNotReady Code = "DATABASE_NOT_READY"

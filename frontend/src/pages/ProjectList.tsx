@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useProjects } from "../api/hooks";
 import { CreateProjectDialog } from "../components/projects/CreateProjectDialog";
 import { ProjectCard } from "../components/projects/ProjectCard";
+import { Button } from "../components/ui/button";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Skeleton } from "../components/ui/skeleton";
 
 export function ProjectList() {
   const [showCreate, setShowCreate] = useState(false);
@@ -10,8 +12,16 @@ export function ProjectList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <p className="text-gray-500">Loading projects...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-9 w-28" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={`skel-${i.toString()}`} className="h-40" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -25,22 +35,29 @@ export function ProjectList() {
   const projects = data?.projects ?? [];
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          New Project
-        </button>
+        <h2 className="text-2xl font-bold text-foreground">Projects</h2>
+        <Button onClick={() => setShowCreate(true)}>New Project</Button>
       </div>
 
       {projects.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">
-            No projects yet. Create your first project to get started.
+        <div className="rounded-lg border border-dashed border-border p-12 text-center">
+          <div className="mx-auto mb-4 flex items-center justify-center gap-3">
+            <span className="inline-block h-3 w-3 rounded-full bg-primary/60 animate-pulse-glow" />
+            <span className="inline-block h-2 w-8 rounded-full bg-primary/20" />
+            <span
+              className="inline-block h-3 w-3 rounded-full bg-primary/40 animate-pulse-glow"
+              style={{ animationDelay: "0.5s" }}
+            />
+            <span className="inline-block h-2 w-8 rounded-full bg-primary/20" />
+            <span
+              className="inline-block h-3 w-3 rounded-full bg-primary/20 animate-pulse-glow"
+              style={{ animationDelay: "1s" }}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            No projects yet. Create your first project to start mapping your codebase.
           </p>
         </div>
       ) : (

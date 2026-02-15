@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
 export function Breadcrumbs() {
@@ -15,17 +16,17 @@ export function Breadcrumbs() {
   });
 
   return (
-    <nav className="mb-4 flex items-center gap-1 text-sm text-gray-500">
-      <Link to="/" className="hover:text-gray-700">
+    <nav className="mb-4 flex items-center gap-1 text-sm text-muted-foreground">
+      <Link to="/" className="hover:text-foreground transition-colors">
         Home
       </Link>
       {crumbs.map((crumb) => (
         <span key={crumb.path} className="flex items-center gap-1">
-          <span>/</span>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
           {crumb.isLast ? (
-            <span className="font-medium text-gray-900">{crumb.label}</span>
+            <span className="font-medium text-foreground">{crumb.label}</span>
           ) : (
-            <Link to={crumb.path} className="hover:text-gray-700">
+            <Link to={crumb.path} className="hover:text-foreground transition-colors">
               {crumb.label}
             </Link>
           )}
