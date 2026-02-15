@@ -41,7 +41,11 @@ func setupHarness(t *testing.T) (*Harness, *store.Store, *session.Manager) {
 	ctx := context.Background()
 
 	// Connect to Postgres
-	pool, err := pgxpool.New(ctx, "postgres://codegraph:codegraph@localhost:5432/codegraph?sslmode=disable")
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://codegraph:codegraph@localhost:5432/codegraph?sslmode=disable"
+	}
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		t.Skipf("postgres not available: %v", err)
 	}
@@ -53,8 +57,12 @@ func setupHarness(t *testing.T) (*Harness, *store.Store, *session.Manager) {
 	s := store.New(pool)
 
 	// Connect to Valkey
+	valkeyAddr := os.Getenv("TEST_VALKEY_ADDR")
+	if valkeyAddr == "" {
+		valkeyAddr = "localhost:6379"
+	}
 	valkeyClient, err := valkey.NewClient(valkey.ClientOption{
-		InitAddress: []string{"localhost:6379"},
+		InitAddress: []string{valkeyAddr},
 	})
 	if err != nil {
 		t.Skipf("valkey not available: %v", err)
