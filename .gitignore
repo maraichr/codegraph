@@ -37,9 +37,6 @@ frontend/.vite/
 # Docker volumes
 .docker-data/
 
-# Generated
-internal/api/graphql/generated.go
-
 # Secrets
 *.pem
 *.key
