@@ -7,7 +7,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/java"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // Parser implements a tree-sitter based Java parser.

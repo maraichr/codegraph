@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/codegraph-labs/codegraph/internal/config"
+	"github.com/maraichr/codegraph/internal/config"
 )
 
 // Embedder is the interface for embedding providers.

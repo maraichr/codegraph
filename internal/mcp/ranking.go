@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/mcp/session"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 // RankConfig controls the weights of different ranking signals.

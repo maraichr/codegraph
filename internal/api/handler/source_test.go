@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/codegraph-labs/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/pkg/apierr"
 )
 
 func TestSourceHandler_Create_InvalidBody(t *testing.T) {

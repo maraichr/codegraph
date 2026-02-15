@@ -5,8 +5,8 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
-	"github.com/codegraph-labs/codegraph/internal/mcp/session"
-	"github.com/codegraph-labs/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/store"
 )
 
 // Server implements the MCP (Model Context Protocol) server

@@ -9,12 +9,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/graph"
-	"github.com/codegraph-labs/codegraph/internal/impact"
-	"github.com/codegraph-labs/codegraph/internal/lineage"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	"github.com/codegraph-labs/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/internal/graph"
+	"github.com/maraichr/codegraph/internal/impact"
+	"github.com/maraichr/codegraph/internal/lineage"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/pkg/apierr"
 )
 
 type SymbolHandler struct {

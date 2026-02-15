@@ -8,7 +8,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/codegraph-labs/codegraph/internal/config"
+	"github.com/maraichr/codegraph/internal/config"
 )
 
 type Client struct {

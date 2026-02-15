@@ -9,9 +9,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
-	"github.com/codegraph-labs/codegraph/pkg/apierr"
-	"github.com/codegraph-labs/codegraph/pkg/models"
+	"github.com/maraichr/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/pkg/apierr"
+	"github.com/maraichr/codegraph/pkg/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	pgvector "github.com/pgvector/pgvector-go"

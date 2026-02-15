@@ -6,7 +6,7 @@ import (
 
 	pg_query "github.com/pganalyze/pg_query_go/v6"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // PgSQLParser implements the parser.Parser interface using pg_query_go.

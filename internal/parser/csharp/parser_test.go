@@ -3,7 +3,7 @@ package csharp
 import (
 	"testing"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 func TestBasicClassWithMembers(t *testing.T) {
@@ -349,6 +349,210 @@ namespace MyApp.Models {
 	assertRefTarget(t, tableRefs, "Order")
 }
 
+func TestExecuteNonQueryProcName(t *testing.T) {
+	src := `
+namespace DotNetNuke.Data {
+    public class DataProvider {
+        public void AddUser(string name) {
+            provider.ExecuteNonQuery("AddUser", name);
+        }
+        public void GetUser(int id) {
+            provider.IDataReader("GetUser", id);
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "DataProvider.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 2 {
+		t.Fatalf("expected 2 calls refs, got %d: %v", len(callRefs), refsToNames(callRefs))
+	}
+	assertRefTarget(t, callRefs, "AddUser")
+	assertRefTarget(t, callRefs, "GetUser")
+	// Verify dbo. qualification
+	for _, r := range callRefs {
+		if r.ToQualified != "dbo."+r.ToName {
+			t.Errorf("expected ToQualified dbo.%s, got %s", r.ToName, r.ToQualified)
+		}
+	}
+}
+
+func TestExecuteWithInlineSQL(t *testing.T) {
+	// When Execute is called with actual SQL, it should extract table refs not proc names
+	src := `
+namespace MyApp {
+    public class Repo {
+        public void Run() {
+            conn.Execute("INSERT INTO Users (Name) VALUES (@name)");
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Repo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "Users")
+	// Should NOT have calls refs since it's inline SQL
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 0 {
+		t.Errorf("expected 0 calls refs for inline SQL, got %d: %v", len(callRefs), refsToNames(callRefs))
+	}
+}
+
+func TestSqlCommandConstructor(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class UserRepo {
+        public void Delete(int id) {
+            var cmd = new SqlCommand("DeleteUser", conn);
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserRepo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 1 {
+		t.Fatalf("expected 1 calls ref, got %d: %v", len(callRefs), refsToNames(callRefs))
+	}
+	assertRefTarget(t, callRefs, "DeleteUser")
+}
+
+func TestSqlCommandWithSQL(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class UserRepo {
+        public void Get() {
+            var cmd = new SqlCommand("SELECT * FROM Users", conn);
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserRepo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "Users")
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 0 {
+		t.Errorf("expected 0 calls refs for SQL in SqlCommand, got %d", len(callRefs))
+	}
+}
+
+func TestCommandTextAssignment(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class UserRepo {
+        public void Run() {
+            cmd.CommandText = "GetAllUsers";
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserRepo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 1 {
+		t.Fatalf("expected 1 calls ref, got %d: %v", len(callRefs), refsToNames(callRefs))
+	}
+	assertRefTarget(t, callRefs, "GetAllUsers")
+}
+
+func TestExecInInlineSQL(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class Repo {
+        public void Run() {
+            conn.Query("EXEC GetActiveUsers @Status = 1");
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Repo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	callRefs := filterRefs(result.References, "calls")
+	assertRefTarget(t, callRefs, "GetActiveUsers")
+}
+
+func TestMultipleProcNameMethods(t *testing.T) {
+	src := `
+namespace DotNetNuke.Data {
+    public class DataProvider {
+        public void DoStuff() {
+            provider.ExecuteReader("GetRoles");
+            provider.ExecuteScalar("CountUsers");
+            provider.GetDataReader("GetPermissions");
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "DataProvider.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 3 {
+		t.Fatalf("expected 3 calls refs, got %d: %v", len(callRefs), refsToNames(callRefs))
+	}
+	assertRefTarget(t, callRefs, "GetRoles")
+	assertRefTarget(t, callRefs, "CountUsers")
+	assertRefTarget(t, callRefs, "GetPermissions")
+}
+
+func TestProcNameWithDboPrefix(t *testing.T) {
+	src := `
+namespace MyApp {
+    public class Repo {
+        public void Run() {
+            provider.ExecuteNonQuery("dbo.AddUser", name);
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Repo.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	callRefs := filterRefs(result.References, "calls")
+	if len(callRefs) != 1 {
+		t.Fatalf("expected 1 calls ref, got %d", len(callRefs))
+	}
+	if callRefs[0].ToName != "AddUser" {
+		t.Errorf("expected ToName AddUser (dbo. stripped), got %s", callRefs[0].ToName)
+	}
+	if callRefs[0].ToQualified != "dbo.AddUser" {
+		t.Errorf("expected ToQualified dbo.AddUser, got %s", callRefs[0].ToQualified)
+	}
+}
+
 // --- helpers ---
 
 func assertSymbol(t *testing.T, symbolMap map[string]parser.Symbol, qname, kind string) {
@@ -399,4 +603,12 @@ func assertRefTarget(t *testing.T, refs []parser.RawReference, target string) {
 		names[i] = r.ToName
 	}
 	t.Errorf("missing ref target %s; have: %v", target, names)
+}
+
+func refsToNames(refs []parser.RawReference) []string {
+	names := make([]string, len(refs))
+	for i, r := range refs {
+		names[i] = r.ToName
+	}
+	return names
 }

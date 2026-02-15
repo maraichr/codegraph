@@ -3,7 +3,7 @@ package javascript
 import (
 	"testing"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // --- JavaScript tests ---

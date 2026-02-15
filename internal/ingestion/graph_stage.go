@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/codegraph-labs/codegraph/internal/graph"
-	"github.com/codegraph-labs/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/graph"
+	"github.com/maraichr/codegraph/internal/store"
 )
 
 // GraphStage syncs symbols and edges from PostgreSQL to Neo4j.

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // BridgeRule defines how to resolve references between different languages.

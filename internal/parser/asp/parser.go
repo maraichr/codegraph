@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // Parser implements a parser for ASP Classic (VBScript) files.

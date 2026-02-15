@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // DFMComponent represents a component in a DFM file.

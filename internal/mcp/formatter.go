@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/mcp/session"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 const defaultMaxTokens = 4000

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/codegraph-labs/codegraph/pkg/models"
+	"github.com/maraichr/codegraph/pkg/models"
 )
 
 type ColumnLineageEdge struct {

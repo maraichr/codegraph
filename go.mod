@@ -1,4 +1,4 @@
-module github.com/codegraph-labs/codegraph
+module github.com/maraichr/codegraph
 
 go 1.25.0
 
@@ -10,6 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
+	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
 	github.com/pganalyze/pg_query_go/v6 v6.2.2

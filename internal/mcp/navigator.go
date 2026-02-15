@@ -3,8 +3,8 @@ package mcp
 import (
 	"fmt"
 
-	"github.com/codegraph-labs/codegraph/internal/mcp/session"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/mcp/session"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 // NavigationHints suggests next tool calls based on current results.

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 // Engine performs cross-file symbol resolution within a project.

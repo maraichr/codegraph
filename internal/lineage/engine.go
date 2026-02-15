@@ -9,10 +9,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/codegraph-labs/codegraph/internal/graph"
-	"github.com/codegraph-labs/codegraph/internal/parser"
-	"github.com/codegraph-labs/codegraph/internal/store"
-	"github.com/codegraph-labs/codegraph/internal/store/postgres"
+	"github.com/maraichr/codegraph/internal/graph"
+	"github.com/maraichr/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/store/postgres"
 )
 
 // Engine handles column-level lineage building and querying.

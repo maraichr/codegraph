@@ -7,7 +7,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/csharp"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // Parser implements a tree-sitter based C# parser.
@@ -85,6 +85,9 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 
 	sqlRefs := extractInlineSQLRefs(root, input.Content, namespace, classRanges)
 	refs = append(refs, sqlRefs...)
+
+	procRefs := extractStoredProcRefs(root, input.Content, classRanges)
+	refs = append(refs, procRefs...)
 
 	return &parser.ParseResult{
 		Symbols:    symbols,
@@ -576,19 +579,34 @@ func extractAttributeRefs(root *sitter.Node, src []byte, _ string, classRanges [
 func extractInlineSQLRefs(root *sitter.Node, src []byte, _ string, classRanges []classRange) []parser.RawReference {
 	var refs []parser.RawReference
 
-	// EF Core and Dapper method names that take SQL strings
-	sqlMethods := map[string]bool{
+	// Methods that take SQL statement strings (SELECT, INSERT, etc.)
+	sqlStatementMethods := map[string]bool{
 		"FromSqlRaw":             true,
 		"FromSqlInterpolated":    true,
 		"ExecuteSqlRaw":          true,
 		"ExecuteSqlInterpolated": true,
 		"SqlQuery":               true,
-		"SqlCommand":             true,
 		"Query":                  true,
-		"Execute":                true,
 		"QueryFirst":             true,
 		"QuerySingle":            true,
 		"QueryFirstOrDefault":    true,
+		"QueryAsync":             true,
+		"QueryMultiple":          true,
+		"QueryFirstAsync":        true,
+		"QuerySingleAsync":       true,
+	}
+
+	// Methods that take a stored procedure NAME as first string arg
+	procNameMethods := map[string]bool{
+		"ExecuteNonQuery": true,
+		"ExecuteReader":   true,
+		"ExecuteScalar":   true,
+		"Execute":         true,
+		"ExecuteAsync":    true,
+		"GetDataReader":   true,
+		"GetData":         true,
+		"BulkInsert":      true,
+		"IDataReader":     true,
 	}
 
 	walkTree(root, func(node *sitter.Node) {
@@ -596,8 +614,6 @@ func extractInlineSQLRefs(root *sitter.Node, src []byte, _ string, classRanges [
 			return
 		}
 
-		// Get the method name from member_access_expression
-		text := node.Content(src)
 		line := int(node.StartPoint().Row) + 1
 		fromSymbol := findEnclosingClass(node, classRanges)
 
@@ -616,26 +632,137 @@ func extractInlineSQLRefs(root *sitter.Node, src []byte, _ string, classRanges [
 			}
 		}
 
-		if !sqlMethods[methodName] {
-			return
-		}
-
 		// Extract string literal argument
 		argList := findChild(node, "argument_list")
 		if argList == nil {
 			return
 		}
 
-		for i := 0; i < int(argList.ChildCount()); i++ {
-			arg := argList.Child(i)
-			sqlStr := extractStringLiteral(arg, src)
-			if sqlStr != "" && looksLikeSQL(sqlStr) {
-				tableRefs := extractSQLTableRefs(sqlStr, line, fromSymbol)
+		if sqlStatementMethods[methodName] {
+			// Existing behavior: extract SQL string, parse table refs
+			for i := 0; i < int(argList.ChildCount()); i++ {
+				arg := argList.Child(i)
+				sqlStr := extractStringLiteral(arg, src)
+				if sqlStr != "" && looksLikeSQL(sqlStr) {
+					tableRefs := extractSQLTableRefs(sqlStr, line, fromSymbol)
+					refs = append(refs, tableRefs...)
+				}
+			}
+		} else if procNameMethods[methodName] {
+			// First string arg is the proc name (or inline SQL)
+			firstStr := extractFirstStringArg(argList, src)
+			if firstStr == "" {
+				return
+			}
+			if looksLikeSQL(firstStr) {
+				// It's an inline SQL statement, extract table refs
+				tableRefs := extractSQLTableRefs(firstStr, line, fromSymbol)
 				refs = append(refs, tableRefs...)
+			} else {
+				// It's a stored procedure name
+				procName := strings.TrimPrefix(firstStr, "dbo.")
+				refs = append(refs, parser.RawReference{
+					FromSymbol:    fromSymbol,
+					ToName:        procName,
+					ToQualified:   "dbo." + procName,
+					ReferenceType: "calls",
+					Line:          line,
+				})
 			}
 		}
+	})
 
-		_ = text // used for debugging if needed
+	return refs
+}
+
+// extractFirstStringArg returns the first string literal found in an argument list.
+func extractFirstStringArg(argList *sitter.Node, src []byte) string {
+	for i := 0; i < int(argList.ChildCount()); i++ {
+		arg := argList.Child(i)
+		if s := extractStringLiteral(arg, src); s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+// extractStoredProcRefs detects SqlCommand constructor and CommandText assignment patterns.
+func extractStoredProcRefs(root *sitter.Node, src []byte, classRanges []classRange) []parser.RawReference {
+	var refs []parser.RawReference
+
+	walkTree(root, func(node *sitter.Node) {
+		line := int(node.StartPoint().Row) + 1
+		fromSymbol := findEnclosingClass(node, classRanges)
+
+		switch node.Type() {
+		case "object_creation_expression":
+			// new SqlCommand("ProcName", ...)
+			typeName := ""
+			for i := 0; i < int(node.ChildCount()); i++ {
+				child := node.Child(i)
+				if child.Type() == "identifier" || child.Type() == "qualified_name" {
+					typeName = child.Content(src)
+					break
+				}
+			}
+			if typeName != "SqlCommand" {
+				return
+			}
+			argList := findChild(node, "argument_list")
+			if argList == nil {
+				return
+			}
+			firstStr := extractFirstStringArg(argList, src)
+			if firstStr == "" {
+				return
+			}
+			if looksLikeSQL(firstStr) {
+				tableRefs := extractSQLTableRefs(firstStr, line, fromSymbol)
+				refs = append(refs, tableRefs...)
+			} else {
+				procName := strings.TrimPrefix(firstStr, "dbo.")
+				refs = append(refs, parser.RawReference{
+					FromSymbol:    fromSymbol,
+					ToName:        procName,
+					ToQualified:   "dbo." + procName,
+					ReferenceType: "calls",
+					Line:          line,
+				})
+			}
+
+		case "assignment_expression":
+			// cmd.CommandText = "ProcName"
+			left := node.Child(0)
+			if left == nil {
+				return
+			}
+			leftText := left.Content(src)
+			if !strings.HasSuffix(leftText, ".CommandText") && leftText != "CommandText" {
+				return
+			}
+			// Right side is the value after '='
+			for i := 0; i < int(node.ChildCount()); i++ {
+				child := node.Child(i)
+				valStr := extractStringLiteral(child, src)
+				if valStr == "" {
+					continue
+				}
+				if looksLikeSQL(valStr) {
+					tableRefs := extractSQLTableRefs(valStr, line, fromSymbol)
+					refs = append(refs, tableRefs...)
+				} else {
+					procName := strings.TrimPrefix(valStr, "dbo.")
+					refs = append(refs, parser.RawReference{
+						FromSymbol:    fromSymbol,
+						ToName:        procName,
+						ToQualified:   "dbo." + procName,
+						ReferenceType: "calls",
+						Line:          line,
+					})
+				}
+				return
+			}
+		}
 	})
 
 	return refs
@@ -709,12 +836,45 @@ func walkTree(node *sitter.Node, fn func(*sitter.Node)) {
 
 func looksLikeSQL(s string) bool {
 	upper := strings.ToUpper(strings.TrimSpace(s))
-	for _, kw := range []string{"SELECT", "INSERT", "UPDATE", "DELETE", "FROM"} {
-		if strings.Contains(upper, kw) {
+	// Check for SQL keywords that should appear as whole words at the start
+	// or preceded by whitespace (not as substrings of identifiers like "DeleteUser")
+	for _, kw := range []string{"SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "EXEC", "EXECUTE"} {
+		if containsSQLKeyword(upper, kw) {
 			return true
 		}
 	}
 	return false
+}
+
+// containsSQLKeyword checks if kw appears as a word boundary in s
+// (at start of string or after whitespace, followed by end/whitespace/punctuation).
+func containsSQLKeyword(upper, kw string) bool {
+	idx := 0
+	for {
+		pos := strings.Index(upper[idx:], kw)
+		if pos < 0 {
+			return false
+		}
+		absPos := idx + pos
+		// Check left boundary: must be at start or preceded by whitespace/punctuation
+		if absPos > 0 {
+			ch := upper[absPos-1]
+			if ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || ch == '_' {
+				idx = absPos + len(kw)
+				continue
+			}
+		}
+		// Check right boundary: must be at end or followed by whitespace/punctuation
+		endPos := absPos + len(kw)
+		if endPos < len(upper) {
+			ch := upper[endPos]
+			if ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || ch == '_' {
+				idx = absPos + len(kw)
+				continue
+			}
+		}
+		return true
+	}
 }
 
 func extractSQLTableRefs(sql string, line int, fromSymbol string) []parser.RawReference {
@@ -743,6 +903,35 @@ func extractSQLTableRefs(sql string, line int, fromSymbol string) []parser.RawRe
 					ToName:        tableName,
 					ToQualified:   "dbo." + tableName,
 					ReferenceType: "uses_table",
+					Line:          line,
+				})
+			}
+			idx = pos
+		}
+	}
+
+	// Extract EXEC/EXECUTE proc references
+	for _, execKw := range []string{"EXEC ", "EXECUTE "} {
+		idx := 0
+		for {
+			pos := strings.Index(upper[idx:], execKw)
+			if pos < 0 {
+				break
+			}
+			pos += idx + len(execKw)
+			rest := strings.TrimSpace(sql[pos:])
+			end := strings.IndexAny(rest, " \t\n,;(@")
+			procName := rest
+			if end > 0 {
+				procName = rest[:end]
+			}
+			procName = strings.TrimSpace(procName)
+			if procName != "" && !isSQLKeyword(procName) {
+				refs = append(refs, parser.RawReference{
+					FromSymbol:    fromSymbol,
+					ToName:        procName,
+					ToQualified:   "dbo." + procName,
+					ReferenceType: "calls",
 					Line:          line,
 				})
 			}

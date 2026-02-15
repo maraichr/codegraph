@@ -8,7 +8,7 @@ import (
 	"github.com/smacker/go-tree-sitter/javascript"
 	"github.com/smacker/go-tree-sitter/typescript/typescript"
 
-	"github.com/codegraph-labs/codegraph/internal/parser"
+	"github.com/maraichr/codegraph/internal/parser"
 )
 
 // Parser implements a tree-sitter based JavaScript/TypeScript parser.

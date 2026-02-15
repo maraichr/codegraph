@@ -3,11 +3,11 @@ package graphql
 import (
 	"log/slog"
 
-	"github.com/codegraph-labs/codegraph/internal/embedding"
-	"github.com/codegraph-labs/codegraph/internal/graph"
-	"github.com/codegraph-labs/codegraph/internal/impact"
-	"github.com/codegraph-labs/codegraph/internal/lineage"
-	"github.com/codegraph-labs/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/embedding"
+	"github.com/maraichr/codegraph/internal/graph"
+	"github.com/maraichr/codegraph/internal/impact"
+	"github.com/maraichr/codegraph/internal/lineage"
+	"github.com/maraichr/codegraph/internal/store"
 )
 
 // Resolver is the root resolver for all GraphQL queries and mutations.

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/codegraph-labs/codegraph/internal/ingestion/connectors"
-	"github.com/codegraph-labs/codegraph/internal/store"
+	"github.com/maraichr/codegraph/internal/ingestion/connectors"
+	"github.com/maraichr/codegraph/internal/store"
 )
 
 // CloneStage fetches source files (ZIP extract, git clone, or S3 sync) into a local work directory.
