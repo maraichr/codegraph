@@ -1,6 +1,7 @@
 # Binaries
 bin/
 tmp/
+mcp
 *.exe
 *.exe~
 *.dll
