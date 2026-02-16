@@ -338,6 +338,18 @@ func extractMembers(body *sitter.Node, src []byte, ns, typeName string) ([]parse
 						Line:          int(child.StartPoint().Row) + 1,
 					})
 				}
+
+				// Check for EF navigation properties (virtual ICollection<T>, virtual T)
+				navType := extractNavigationProperty(child, src)
+				if navType != "" {
+					refs = append(refs, parser.RawReference{
+						FromSymbol:    qualifyCSharp(ns, typeName),
+						ToName:        navType,
+						ReferenceType: "references",
+						Confidence:    0.85,
+						Line:          int(child.StartPoint().Row) + 1,
+					})
+				}
 			}
 
 		case "field_declaration":
@@ -425,6 +437,72 @@ func extractDbSetType(node *sitter.Node, src []byte) string {
 		}
 	}
 	return ""
+}
+
+// extractNavigationProperty detects EF navigation properties:
+// - virtual ICollection<Order> Orders { get; set; }
+// - virtual IEnumerable<Order> Orders { get; set; }
+// - virtual List<Order> Orders { get; set; }
+// - virtual Customer Customer { get; set; }
+func extractNavigationProperty(node *sitter.Node, src []byte) string {
+	text := node.Content(src)
+
+	// Must have 'virtual' modifier
+	if !strings.Contains(text, "virtual") {
+		return ""
+	}
+
+	// Collection navigation: ICollection<T>, IEnumerable<T>, List<T>, IList<T>, HashSet<T>
+	collectionTypes := []string{"ICollection<", "IEnumerable<", "List<", "IList<", "HashSet<"}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "generic_name" {
+			childText := child.Content(src)
+			for _, ct := range collectionTypes {
+				if strings.HasPrefix(childText, ct) {
+					inner := childText[len(ct) : len(childText)-1]
+					return inner
+				}
+			}
+		}
+	}
+
+	// Single navigation: virtual Customer Customer { get; set; }
+	// Look for type_identifier that's a PascalCase name (not a primitive)
+	hasVirtual := false
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "modifier" && child.Content(src) == "virtual" {
+			hasVirtual = true
+		}
+	}
+	if hasVirtual {
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "identifier" || child.Type() == "nullable_type" {
+				typeName := child.Content(src)
+				typeName = strings.TrimSuffix(typeName, "?")
+				// Skip primitive types and common non-navigation types
+				if !isPrimitiveType(typeName) && len(typeName) > 0 && typeName[0] >= 'A' && typeName[0] <= 'Z' {
+					return typeName
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+func isPrimitiveType(t string) bool {
+	primitives := map[string]bool{
+		"string": true, "String": true, "int": true, "Int32": true,
+		"long": true, "Int64": true, "bool": true, "Boolean": true,
+		"double": true, "Double": true, "float": true, "Single": true,
+		"decimal": true, "Decimal": true, "DateTime": true, "DateTimeOffset": true,
+		"Guid": true, "byte": true, "Byte": true, "char": true,
+		"object": true, "Object": true, "void": true,
+	}
+	return primitives[t]
 }
 
 func extractBaseList(node *sitter.Node, src []byte, fromQName string) []parser.RawReference {
@@ -666,6 +744,18 @@ func extractInlineSQLRefs(root *sitter.Node, src []byte, _ string, classRanges [
 					ToName:        procName,
 					ToQualified:   "dbo." + procName,
 					ReferenceType: "calls",
+					Line:          line,
+				})
+			}
+		} else if methodName == "Include" || methodName == "ThenInclude" {
+			// .Include("Orders") or .Include("Customer")
+			firstStr := extractFirstStringArg(argList, src)
+			if firstStr != "" {
+				refs = append(refs, parser.RawReference{
+					FromSymbol:    fromSymbol,
+					ToName:        firstStr,
+					ReferenceType: "references",
+					Confidence:    0.8,
 					Line:          line,
 				})
 			}

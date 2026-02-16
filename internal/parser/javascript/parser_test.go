@@ -387,6 +387,137 @@ class Outer {
 	assertHasSymbol(t, result.Symbols, "Outer.method2", "method")
 }
 
+// --- Database/ORM detection tests ---
+
+func TestTSEntityDecorator(t *testing.T) {
+	src := `
+import { Entity, Column } from 'typeorm';
+
+@Entity("users")
+class User {
+  @Column()
+  name: string;
+}
+`
+	p := NewTS()
+	result, err := p.Parse(parser.FileInput{Path: "user.ts", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "users")
+}
+
+func TestJSSequelizeDefine(t *testing.T) {
+	src := `
+const User = sequelize.define('users', {
+  name: DataTypes.STRING,
+});
+`
+	p := NewJS()
+	result, err := p.Parse(parser.FileInput{Path: "models.js", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "users")
+}
+
+func TestJSPoolQuery(t *testing.T) {
+	src := `
+async function getUsers() {
+  const result = await pool.query("SELECT * FROM users WHERE active = true");
+  return result.rows;
+}
+`
+	p := NewJS()
+	result, err := p.Parse(parser.FileInput{Path: "db.js", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "users")
+}
+
+func TestJSKnexQueryBuilder(t *testing.T) {
+	src := `
+const users = knex('customers').select('*').where('active', true);
+`
+	p := NewJS()
+	result, err := p.Parse(parser.FileInput{Path: "query.js", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "customers")
+}
+
+func TestJSKnexRaw(t *testing.T) {
+	src := `
+const result = await knex.raw("SELECT * FROM payments WHERE amount > 100");
+`
+	p := NewJS()
+	result, err := p.Parse(parser.FileInput{Path: "raw.js", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "payments")
+}
+
+func TestTSPrismaModelAccess(t *testing.T) {
+	src := `
+async function getUser(id: string) {
+  return prisma.user.findUnique({ where: { id } });
+}
+`
+	p := NewTS()
+	result, err := p.Parse(parser.FileInput{Path: "service.ts", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	assertRefTarget(t, tableRefs, "user")
+}
+
+func TestJSConnectionExecute(t *testing.T) {
+	src := `
+async function insertOrder(order) {
+  await connection.execute("INSERT INTO orders VALUES ($1, $2)", [order.id, order.name]);
+}
+`
+	p := NewJS()
+	result, err := p.Parse(parser.FileInput{Path: "orders.js", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "writes_to")
+	assertRefTarget(t, tableRefs, "orders")
+}
+
+func TestJSNoFalsePositiveOnNonSQL(t *testing.T) {
+	src := `
+const result = await fetch("/api/users");
+`
+	p := NewJS()
+	result, err := p.Parse(parser.FileInput{Path: "api.js", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableRefs := filterRefs(result.References, "uses_table")
+	if len(tableRefs) != 0 {
+		t.Errorf("expected no table refs from fetch call, got %d", len(tableRefs))
+	}
+}
+
 // --- helpers ---
 
 func assertHasSymbol(t *testing.T, symbols []parser.Symbol, qname, kind string) {

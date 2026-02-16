@@ -16,6 +16,14 @@ type BridgeRule struct {
 	MatchStrategy  string // exact, case_insensitive, schema_qualified, strip_prefix
 }
 
+// BridgeMatch represents a successful cross-language resolution with confidence.
+type BridgeMatch struct {
+	TargetID   uuid.UUID
+	Confidence float64 // exact=1.0, schema_qualified=0.95, case_insensitive=0.85, strip_prefix=0.75, orm_convention=0.7
+	Strategy   string
+	Bridge     string // e.g., "csharp→tsql"
+}
+
 // CrossLangResolver resolves references across language boundaries.
 type CrossLangResolver struct {
 	rules  []BridgeRule
@@ -42,13 +50,26 @@ func (c *CrossLangResolver) RegisterDefaultRules() {
 		{SourceLanguage: "javascript", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
 		{SourceLanguage: "typescript", TargetLanguage: "tsql", MatchStrategy: "case_insensitive"},
 
+		// JS/TS → PostgreSQL (common with Node.js stacks)
+		{SourceLanguage: "javascript", TargetLanguage: "pgsql", MatchStrategy: "case_insensitive"},
+		{SourceLanguage: "typescript", TargetLanguage: "pgsql", MatchStrategy: "case_insensitive"},
+
+		// C# → PostgreSQL
+		{SourceLanguage: "csharp", TargetLanguage: "pgsql", MatchStrategy: "schema_qualified"},
+
+		// ORM convention matching (pluralize/singularize)
+		{SourceLanguage: "csharp", TargetLanguage: "tsql", MatchStrategy: "orm_convention"},
+		{SourceLanguage: "java", TargetLanguage: "pgsql", MatchStrategy: "orm_convention"},
+		{SourceLanguage: "java", TargetLanguage: "tsql", MatchStrategy: "orm_convention"},
+
 		// Delphi T-prefix: strip T from class names when matching SQL objects
 		{SourceLanguage: "delphi", TargetLanguage: "tsql", MatchStrategy: "strip_prefix"},
 	}
 }
 
 // Resolve attempts to resolve a reference using cross-language bridge rules.
-func (c *CrossLangResolver) Resolve(ref parser.RawReference, sourceLang string, table *SymbolTable) (uuid.UUID, bool) {
+// Returns a BridgeMatch with confidence and strategy information.
+func (c *CrossLangResolver) Resolve(ref parser.RawReference, sourceLang string, table *SymbolTable) (BridgeMatch, bool) {
 	targetName := ref.ToName
 	targetQualified := ref.ToQualified
 	if targetQualified == "" {
@@ -60,10 +81,12 @@ func (c *CrossLangResolver) Resolve(ref parser.RawReference, sourceLang string, 
 			continue
 		}
 
+		bridge := rule.SourceLanguage + "→" + rule.TargetLanguage
+
 		switch rule.MatchStrategy {
 		case "exact":
 			if id, ok := table.ByFQN[targetQualified]; ok {
-				return id, true
+				return BridgeMatch{TargetID: id, Confidence: 1.0, Strategy: "exact", Bridge: bridge}, true
 			}
 
 		case "case_insensitive":
@@ -72,10 +95,9 @@ func (c *CrossLangResolver) Resolve(ref parser.RawReference, sourceLang string, 
 				if strings.ToLower(shortNameOf(fqn)) == lower {
 					// Verify target language matches if available
 					if lang, hasLang := table.ByLang[fqn]; hasLang && matchesLanguage(lang, rule.TargetLanguage) {
-						return id, true
+						return BridgeMatch{TargetID: id, Confidence: 0.85, Strategy: "case_insensitive", Bridge: bridge}, true
 					} else if !hasLang {
-						// If we can't verify language, still return the match
-						return id, true
+						return BridgeMatch{TargetID: id, Confidence: 0.85, Strategy: "case_insensitive", Bridge: bridge}, true
 					}
 				}
 			}
@@ -91,7 +113,7 @@ func (c *CrossLangResolver) Resolve(ref parser.RawReference, sourceLang string, 
 				lower := strings.ToLower(candidate)
 				for fqn, id := range table.ByFQN {
 					if strings.ToLower(fqn) == lower {
-						return id, true
+						return BridgeMatch{TargetID: id, Confidence: 0.95, Strategy: "schema_qualified", Bridge: bridge}, true
 					}
 				}
 			}
@@ -105,13 +127,55 @@ func (c *CrossLangResolver) Resolve(ref parser.RawReference, sourceLang string, 
 			lower := strings.ToLower(stripped)
 			for fqn, id := range table.ByFQN {
 				if strings.ToLower(shortNameOf(fqn)) == lower {
-					return id, true
+					return BridgeMatch{TargetID: id, Confidence: 0.75, Strategy: "strip_prefix", Bridge: bridge}, true
+				}
+			}
+
+		case "orm_convention":
+			// ORM naming: try pluralize/singularize
+			variants := ormNameVariants(targetName)
+			for _, variant := range variants {
+				lower := strings.ToLower(variant)
+				for fqn, id := range table.ByFQN {
+					if strings.ToLower(shortNameOf(fqn)) == lower {
+						if lang, hasLang := table.ByLang[fqn]; hasLang && matchesLanguage(lang, rule.TargetLanguage) {
+							return BridgeMatch{TargetID: id, Confidence: 0.7, Strategy: "orm_convention", Bridge: bridge}, true
+						} else if !hasLang {
+							return BridgeMatch{TargetID: id, Confidence: 0.7, Strategy: "orm_convention", Bridge: bridge}, true
+						}
+					}
 				}
 			}
 		}
 	}
 
-	return uuid.Nil, false
+	return BridgeMatch{}, false
+}
+
+// ormNameVariants returns naming convention variants for ORM resolution.
+func ormNameVariants(name string) []string {
+	variants := []string{name}
+
+	// Pluralize
+	lower := strings.ToLower(name)
+	if strings.HasSuffix(lower, "y") && !strings.HasSuffix(lower, "ey") && !strings.HasSuffix(lower, "ay") && !strings.HasSuffix(lower, "oy") {
+		variants = append(variants, name[:len(name)-1]+"ies")
+	} else if strings.HasSuffix(lower, "s") || strings.HasSuffix(lower, "x") || strings.HasSuffix(lower, "ch") || strings.HasSuffix(lower, "sh") {
+		variants = append(variants, name+"es")
+	} else {
+		variants = append(variants, name+"s")
+	}
+
+	// Singularize
+	if strings.HasSuffix(lower, "ies") {
+		variants = append(variants, name[:len(name)-3]+"y")
+	} else if strings.HasSuffix(lower, "es") {
+		variants = append(variants, name[:len(name)-2])
+	} else if strings.HasSuffix(lower, "s") && !strings.HasSuffix(lower, "ss") {
+		variants = append(variants, name[:len(name)-1])
+	}
+
+	return variants
 }
 
 func matchesLanguage(actual, pattern string) bool {

@@ -54,6 +54,10 @@ func (e *Engine) ComputeAll(ctx context.Context, projectID uuid.UUID) error {
 		return fmt.Errorf("compute bridges: %w", err)
 	}
 
+	if err := e.ComputeBridgeCoverage(ctx, projectID); err != nil {
+		return fmt.Errorf("compute bridge coverage: %w", err)
+	}
+
 	e.logger.Info("analytics complete", slog.String("project_id", projectID.String()))
 	return nil
 }
@@ -374,6 +378,51 @@ func (e *Engine) ComputeCrossLanguageBridges(ctx context.Context, projectID uuid
 	}
 
 	e.logger.Info("cross-language bridges computed", slog.Int("bridge_types", len(bridges)))
+	return nil
+}
+
+// ComputeBridgeCoverage computes confidence metrics for cross-language edges.
+func (e *Engine) ComputeBridgeCoverage(ctx context.Context, projectID uuid.UUID) error {
+	stats, err := e.store.GetBridgeCoverageStats(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("get bridge coverage stats: %w", err)
+	}
+
+	if stats.TotalCrossLangEdges == 0 {
+		e.logger.Info("no cross-language edges for bridge coverage")
+		return nil
+	}
+
+	avgConf := 0.0
+	if v, ok := stats.AvgConfidence.(float64); ok {
+		avgConf = math.Round(v*100) / 100
+	}
+
+	coverageAnalytics := map[string]any{
+		"total_cross_lang_edges": stats.TotalCrossLangEdges,
+		"edges_with_confidence":  stats.EdgesWithConfidence,
+		"avg_confidence":         avgConf,
+		"low_confidence_edges":   stats.LowConfidenceEdges,
+	}
+	coverageJSON, _ := json.Marshal(coverageAnalytics)
+
+	coveragePct := float64(stats.EdgesWithConfidence) / float64(stats.TotalCrossLangEdges) * 100
+	summary := fmt.Sprintf("Bridge coverage: %d/%d cross-language edges have confidence scores (%.0f%%). Avg confidence: %.2f. Low confidence (<0.8): %d edges.",
+		stats.EdgesWithConfidence, stats.TotalCrossLangEdges, coveragePct, avgConf, stats.LowConfidenceEdges)
+
+	if _, err := e.store.UpsertProjectAnalytics(ctx, postgres.UpsertProjectAnalyticsParams{
+		ProjectID: projectID,
+		Scope:     "project",
+		ScopeID:   "bridge_coverage",
+		Analytics: coverageJSON,
+		Summary:   &summary,
+	}); err != nil {
+		return fmt.Errorf("upsert bridge coverage: %w", err)
+	}
+
+	e.logger.Info("bridge coverage computed",
+		slog.Int64("total_cross_lang", stats.TotalCrossLangEdges),
+		slog.Int64("with_confidence", stats.EdgesWithConfidence))
 	return nil
 }
 

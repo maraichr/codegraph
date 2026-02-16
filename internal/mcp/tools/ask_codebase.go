@@ -30,6 +30,9 @@ type AskCodebaseHandler struct {
 	store    *store.Store
 	session  *session.Manager
 	subgraph *ExtractSubgraphHandler
+	impact   *AnalyzeImpactHandler
+	lineage  *GetLineageHandler
+	trace    *TraceCrossLanguageHandler
 	logger   *slog.Logger
 }
 
@@ -39,6 +42,9 @@ func NewAskCodebaseHandler(s *store.Store, sm *session.Manager, embedder embeddi
 		store:    s,
 		session:  sm,
 		subgraph: NewExtractSubgraphHandler(s, sm, embedder, logger),
+		impact:   NewAnalyzeImpactHandler(s, logger),
+		lineage:  NewGetLineageHandler(s, logger),
+		trace:    NewTraceCrossLanguageHandler(s, logger),
 		logger:   logger,
 	}
 }
@@ -57,6 +63,7 @@ const (
 	IntentRelationships Intent = "relationships"
 	IntentBridges       Intent = "bridges"
 	IntentAnalytics     Intent = "analytics"
+	IntentCrossLanguage Intent = "cross_language"
 )
 
 // Handle classifies the question intent and routes to the appropriate tool chain.
@@ -89,6 +96,8 @@ func (h *AskCodebaseHandler) Handle(ctx context.Context, params AskCodebaseParam
 		return h.handleBridges(ctx, params)
 	case IntentAnalytics:
 		return h.handleAnalytics(ctx, params)
+	case IntentCrossLanguage:
+		return h.handleCrossLanguage(ctx, params)
 	default:
 		return h.handleSearch(ctx, params)
 	}
@@ -128,6 +137,21 @@ func classifyIntent(question string) Intent {
 	for _, p := range lineagePatterns {
 		if strings.Contains(q, p) {
 			return IntentLineage
+		}
+	}
+
+	// Cross-language trace patterns (check before bridges)
+	crossLangPatterns := []string{
+		"what tables does", "tables does this endpoint",
+		"full stack", "stack trace", "stack slice", "end to end",
+		"calls this stored proc", "calls this procedure",
+		"from app code", "from the frontend", "from the api",
+		"what touches", "who calls",
+		"cross-language trace", "cross language trace",
+	}
+	for _, p := range crossLangPatterns {
+		if strings.Contains(q, p) {
+			return IntentCrossLanguage
 		}
 	}
 
@@ -373,12 +397,48 @@ func (h *AskCodebaseHandler) handleSearch(ctx context.Context, params AskCodebas
 }
 
 func (h *AskCodebaseHandler) handleImpact(ctx context.Context, params AskCodebaseParams) (string, error) {
-	// Extract the target symbol name from the question and search for it
-	return h.handleSearch(ctx, params)
+	symbolName := extractSearchTerms(params.Question)
+	changeType := "modify"
+	q := strings.ToLower(params.Question)
+	if strings.Contains(q, "delete") || strings.Contains(q, "remove") || strings.Contains(q, "drop") {
+		changeType = "delete"
+	} else if strings.Contains(q, "rename") {
+		changeType = "rename"
+	}
+	return h.impact.Handle(ctx, AnalyzeImpactParams{
+		Project:    params.Project,
+		SymbolName: symbolName,
+		ChangeType: changeType,
+		MaxDepth:   3,
+	})
 }
 
 func (h *AskCodebaseHandler) handleLineage(ctx context.Context, params AskCodebaseParams) (string, error) {
-	return h.handleSearch(ctx, params)
+	symbolName := extractSearchTerms(params.Question)
+	direction := "both"
+	q := strings.ToLower(params.Question)
+	if strings.Contains(q, "come from") || strings.Contains(q, "upstream") || strings.Contains(q, "data source") {
+		direction = "upstream"
+	} else if strings.Contains(q, "written to") || strings.Contains(q, "downstream") || strings.Contains(q, "populates") {
+		direction = "downstream"
+	}
+	return h.lineage.Handle(ctx, GetLineageParams{
+		Project:    params.Project,
+		SymbolName: symbolName,
+		Direction:  direction,
+		MaxDepth:   5,
+	})
+}
+
+func (h *AskCodebaseHandler) handleCrossLanguage(ctx context.Context, params AskCodebaseParams) (string, error) {
+	symbolName := extractSearchTerms(params.Question)
+	return h.trace.Handle(ctx, TraceCrossLanguageParams{
+		Project:    params.Project,
+		SymbolName: symbolName,
+		Direction:  "full",
+		MaxDepth:   5,
+		SessionID:  params.SessionID,
+	})
 }
 
 func (h *AskCodebaseHandler) handleSubgraph(ctx context.Context, params AskCodebaseParams) (string, error) {

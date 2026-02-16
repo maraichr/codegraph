@@ -9,6 +9,7 @@ import (
 	"github.com/smacker/go-tree-sitter/typescript/typescript"
 
 	"github.com/maraichr/lattice/internal/parser"
+	"github.com/maraichr/lattice/internal/parser/sqlutil"
 )
 
 // Parser implements a tree-sitter based JavaScript/TypeScript parser.
@@ -51,6 +52,10 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 		symbols = append(symbols, syms...)
 		refs = append(refs, rfs...)
 	}
+
+	// Post-extraction pass: detect ORM/SQL database references
+	dbRefs := p.extractDatabaseRefs(root, input.Content, symbols)
+	refs = append(refs, dbRefs...)
 
 	return &parser.ParseResult{
 		Symbols:    symbols,
@@ -640,6 +645,334 @@ func (p *Parser) extractEnumDecl(node *sitter.Node, src []byte, scope string) pa
 		StartLine:     int(node.StartPoint().Row) + 1,
 		EndLine:       int(node.EndPoint().Row) + 1,
 	}
+}
+
+// --- Database/ORM reference detection ---
+
+// extractDatabaseRefs walks the AST for ORM and SQL patterns:
+// TypeORM/Sequelize decorators, sequelize.define, raw SQL via pool.query,
+// Knex query builder, Prisma model access.
+func (p *Parser) extractDatabaseRefs(root *sitter.Node, src []byte, symbols []parser.Symbol) []parser.RawReference {
+	var refs []parser.RawReference
+
+	// Build symbol line ranges for FromSymbol resolution
+	type symRange struct {
+		qname     string
+		startLine int
+		endLine   int
+	}
+	var ranges []symRange
+	for _, s := range symbols {
+		if s.Kind == "class" || s.Kind == "function" || s.Kind == "method" {
+			ranges = append(ranges, symRange{s.QualifiedName, s.StartLine, s.EndLine})
+		}
+	}
+	findEnclosing := func(line int) string {
+		best := ""
+		bestSpan := 1<<31 - 1
+		for _, r := range ranges {
+			if line >= r.startLine && line <= r.endLine {
+				span := r.endLine - r.startLine
+				if span < bestSpan {
+					bestSpan = span
+					best = r.qname
+				}
+			}
+		}
+		return best
+	}
+
+	walkTree(root, func(node *sitter.Node) {
+		switch node.Type() {
+		case "decorator":
+			// @Entity("users") or @Entity({name: "users"}) on class
+			ref := p.extractEntityDecorator(node, src)
+			if ref != nil {
+				refs = append(refs, *ref)
+			}
+
+		case "call_expression":
+			line := int(node.StartPoint().Row) + 1
+			from := findEnclosing(line)
+
+			// Check for various call patterns
+			fn := findChild(node, "member_expression")
+			if fn != nil {
+				r := p.extractMemberCallDBRef(fn, node, src, line, from)
+				refs = append(refs, r...)
+			} else {
+				// knex('tablename') — direct call
+				fnIdent := findChild(node, "identifier")
+				if fnIdent != nil && fnIdent.Content(src) == "knex" {
+					args := findChild(node, "arguments")
+					if args != nil {
+						tableName := extractFirstString(args, src)
+						if tableName != "" {
+							refs = append(refs, parser.RawReference{
+								FromSymbol:    from,
+								ToName:        tableName,
+								ReferenceType: "uses_table",
+								Confidence:    0.9,
+								Line:          line,
+							})
+						}
+					}
+				}
+			}
+		}
+	})
+
+	return refs
+}
+
+// extractEntityDecorator handles @Entity("tableName") and @Table("tableName") decorators.
+func (p *Parser) extractEntityDecorator(node *sitter.Node, src []byte) *parser.RawReference {
+	// Decorator child is either identifier or call_expression
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "call_expression" {
+			fn := findChild(child, "identifier")
+			if fn == nil {
+				continue
+			}
+			name := fn.Content(src)
+			if name != "Entity" && name != "Table" {
+				continue
+			}
+			args := findChild(child, "arguments")
+			if args == nil {
+				continue
+			}
+			tableName := extractFirstString(args, src)
+			if tableName == "" {
+				// Try object arg: @Entity({name: "users"})
+				tableName = extractObjectStringProp(args, src, "name")
+			}
+			if tableName == "" {
+				continue
+			}
+			// Find the class this decorator is on
+			parent := node.Parent()
+			className := ""
+			if parent != nil {
+				for j := 0; j < int(parent.ChildCount()); j++ {
+					gc := parent.Child(j)
+					if gc.Type() == "identifier" || gc.Type() == "type_identifier" {
+						className = gc.Content(src)
+						break
+					}
+				}
+			}
+			return &parser.RawReference{
+				FromSymbol:    className,
+				ToName:        tableName,
+				ReferenceType: "uses_table",
+				Confidence:    0.95,
+				Line:          int(node.StartPoint().Row) + 1,
+			}
+		}
+	}
+	return nil
+}
+
+// extractMemberCallDBRef handles member expression call patterns:
+// pool.query("SQL"), sequelize.define("table", ...), knex.raw("SQL"),
+// prisma.user.findMany(), connection.execute("SQL")
+func (p *Parser) extractMemberCallDBRef(memberExpr, callNode *sitter.Node, src []byte, line int, from string) []parser.RawReference {
+	var refs []parser.RawReference
+
+	// Get the full member expression text for analysis
+	memberText := memberExpr.Content(src)
+
+	// Extract the method name (last identifier in the member expression)
+	methodName := ""
+	for i := int(memberExpr.ChildCount()) - 1; i >= 0; i-- {
+		child := memberExpr.Child(i)
+		if child.Type() == "property_identifier" || child.Type() == "identifier" {
+			methodName = child.Content(src)
+			break
+		}
+	}
+
+	// Extract the root object name (walk down nested member_expressions)
+	objectName := extractRootIdentifier(memberExpr, src)
+
+	args := findChild(callNode, "arguments")
+
+	switch {
+	// sequelize.define('tableName', { ... })
+	case methodName == "define" && args != nil:
+		tableName := extractFirstString(args, src)
+		if tableName != "" {
+			refs = append(refs, parser.RawReference{
+				FromSymbol:    from,
+				ToName:        tableName,
+				ReferenceType: "uses_table",
+				Confidence:    0.95,
+				Line:          line,
+			})
+		}
+
+	// pool.query("SQL"), connection.query("SQL"), client.query("SQL"),
+	// conn.execute("SQL"), connection.execute("SQL")
+	case (methodName == "query" || methodName == "execute") && args != nil:
+		sqlStr := extractFirstString(args, src)
+		if sqlStr != "" && sqlutil.LooksLikeSQL(sqlStr) {
+			tableRefs := sqlutil.ExtractTableRefs(sqlStr, line, from, "")
+			for i := range tableRefs {
+				tableRefs[i].Confidence = 0.9
+			}
+			refs = append(refs, tableRefs...)
+		}
+
+	// knex.raw("SQL"), knex.schema.raw("SQL")
+	case methodName == "raw" && args != nil:
+		sqlStr := extractFirstString(args, src)
+		if sqlStr != "" && sqlutil.LooksLikeSQL(sqlStr) {
+			tableRefs := sqlutil.ExtractTableRefs(sqlStr, line, from, "")
+			for i := range tableRefs {
+				tableRefs[i].Confidence = 0.85
+			}
+			refs = append(refs, tableRefs...)
+		}
+
+	// conn.prepareStatement("SQL"), conn.prepareCall("{call proc}")
+	case (methodName == "prepareStatement" || methodName == "prepareCall") && args != nil:
+		sqlStr := extractFirstString(args, src)
+		if sqlStr != "" && sqlutil.LooksLikeSQL(sqlStr) {
+			tableRefs := sqlutil.ExtractTableRefs(sqlStr, line, from, "")
+			for i := range tableRefs {
+				tableRefs[i].Confidence = 0.9
+			}
+			refs = append(refs, tableRefs...)
+		}
+
+	// Prisma: prisma.user.findMany(), prisma.order.create(), etc.
+	case isPrismaMethod(methodName) && strings.Contains(memberText, "."):
+		// Extract the model name from prisma.modelName.method()
+		modelName := extractPrismaModel(memberExpr, src)
+		if modelName != "" && objectName == "prisma" {
+			refs = append(refs, parser.RawReference{
+				FromSymbol:    from,
+				ToName:        modelName,
+				ReferenceType: "uses_table",
+				Confidence:    0.8,
+				Line:          line,
+			})
+		}
+	}
+
+	// knex('table') as part of chain: knex('users').select('*')
+	// Check if the object part is itself a call to knex
+	if objectName == "" && memberExpr.ChildCount() > 0 {
+		firstChild := memberExpr.Child(0)
+		if firstChild.Type() == "call_expression" {
+			knexFn := findChild(firstChild, "identifier")
+			if knexFn != nil && knexFn.Content(src) == "knex" {
+				knexArgs := findChild(firstChild, "arguments")
+				if knexArgs != nil {
+					tableName := extractFirstString(knexArgs, src)
+					if tableName != "" {
+						refs = append(refs, parser.RawReference{
+							FromSymbol:    from,
+							ToName:        tableName,
+							ReferenceType: "uses_table",
+							Confidence:    0.9,
+							Line:          line,
+						})
+					}
+				}
+			}
+		}
+	}
+
+	return refs
+}
+
+func isPrismaMethod(method string) bool {
+	prisma := map[string]bool{
+		"findMany": true, "findFirst": true, "findUnique": true,
+		"findFirstOrThrow": true, "findUniqueOrThrow": true,
+		"create": true, "createMany": true,
+		"update": true, "updateMany": true,
+		"upsert": true,
+		"delete": true, "deleteMany": true,
+		"count": true, "aggregate": true, "groupBy": true,
+	}
+	return prisma[method]
+}
+
+// extractPrismaModel extracts the model name from prisma.modelName.method()
+func extractPrismaModel(memberExpr *sitter.Node, src []byte) string {
+	// Structure: member_expression → member_expression → identifier("prisma") + property_identifier("user")
+	// The outer has property_identifier("findMany")
+	inner := findChild(memberExpr, "member_expression")
+	if inner == nil {
+		return ""
+	}
+	// The model name is the property_identifier of the inner member expression
+	for i := 0; i < int(inner.ChildCount()); i++ {
+		child := inner.Child(i)
+		if child.Type() == "property_identifier" {
+			return child.Content(src)
+		}
+	}
+	return ""
+}
+
+// extractRootIdentifier walks down nested member_expressions to find the root identifier.
+// e.g., for prisma.user.findUnique → returns "prisma"
+func extractRootIdentifier(node *sitter.Node, src []byte) string {
+	current := node
+	for {
+		inner := findChild(current, "member_expression")
+		if inner != nil {
+			current = inner
+			continue
+		}
+		ident := findChild(current, "identifier")
+		if ident != nil {
+			return ident.Content(src)
+		}
+		return ""
+	}
+}
+
+// extractFirstString returns the first string literal from an arguments node.
+func extractFirstString(args *sitter.Node, src []byte) string {
+	for i := 0; i < int(args.ChildCount()); i++ {
+		child := args.Child(i)
+		if child.Type() == "string" || child.Type() == "template_string" {
+			return extractStringContent(child, src)
+		}
+	}
+	return ""
+}
+
+// extractObjectStringProp extracts a string property value from an object literal argument.
+// e.g., extractObjectStringProp(args, src, "name") from @Entity({name: "users"})
+func extractObjectStringProp(args *sitter.Node, src []byte, prop string) string {
+	for i := 0; i < int(args.ChildCount()); i++ {
+		child := args.Child(i)
+		if child.Type() == "object" {
+			for j := 0; j < int(child.ChildCount()); j++ {
+				pair := child.Child(j)
+				if pair.Type() == "pair" {
+					key := findChild(pair, "property_identifier")
+					if key == nil {
+						key = findChild(pair, "identifier")
+					}
+					if key != nil && key.Content(src) == prop {
+						val := findChild(pair, "string")
+						if val != nil {
+							return extractStringContent(val, src)
+						}
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // --- Decorators (TS) ---

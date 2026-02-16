@@ -74,6 +74,38 @@ func (q *Queries) DeleteProjectAnalytics(ctx context.Context, projectID uuid.UUI
 	return err
 }
 
+const getBridgeCoverageStats = `-- name: GetBridgeCoverageStats :one
+SELECT
+    count(*) FILTER (WHERE e.metadata ? 'confidence') AS edges_with_confidence,
+    COALESCE(avg((e.metadata->>'confidence')::float) FILTER (WHERE e.metadata ? 'confidence'), 0) AS avg_confidence,
+    count(*) FILTER (WHERE e.metadata ? 'confidence' AND (e.metadata->>'confidence')::float < 0.8) AS low_confidence_edges,
+    count(*) AS total_cross_lang_edges
+FROM symbol_edges e
+JOIN symbols s1 ON e.source_id = s1.id
+JOIN symbols s2 ON e.target_id = s2.id
+WHERE e.project_id = $1 AND s1.language != s2.language
+`
+
+type GetBridgeCoverageStatsRow struct {
+	EdgesWithConfidence int64       `json:"edges_with_confidence"`
+	AvgConfidence       interface{} `json:"avg_confidence"`
+	LowConfidenceEdges  int64       `json:"low_confidence_edges"`
+	TotalCrossLangEdges int64       `json:"total_cross_lang_edges"`
+}
+
+// Bridge coverage stats: confidence metrics for cross-language edges
+func (q *Queries) GetBridgeCoverageStats(ctx context.Context, projectID uuid.UUID) (GetBridgeCoverageStatsRow, error) {
+	row := q.db.QueryRow(ctx, getBridgeCoverageStats, projectID)
+	var i GetBridgeCoverageStatsRow
+	err := row.Scan(
+		&i.EdgesWithConfidence,
+		&i.AvgConfidence,
+		&i.LowConfidenceEdges,
+		&i.TotalCrossLangEdges,
+	)
+	return i, err
+}
+
 const getCrossLanguageBridges = `-- name: GetCrossLanguageBridges :many
 SELECT
     s1.language AS source_language,
