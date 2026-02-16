@@ -159,6 +159,18 @@ LEFT JOIN symbols s ON f.id = s.file_id
 WHERE f.project_id = $1
 GROUP BY f.source_id;
 
+-- Bridge coverage stats: confidence metrics for cross-language edges
+-- name: GetBridgeCoverageStats :one
+SELECT
+    count(*) FILTER (WHERE e.metadata ? 'confidence') AS edges_with_confidence,
+    COALESCE(avg((e.metadata->>'confidence')::float) FILTER (WHERE e.metadata ? 'confidence'), 0) AS avg_confidence,
+    count(*) FILTER (WHERE e.metadata ? 'confidence' AND (e.metadata->>'confidence')::float < 0.8) AS low_confidence_edges,
+    count(*) AS total_cross_lang_edges
+FROM symbol_edges e
+JOIN symbols s1 ON e.source_id = s1.id
+JOIN symbols s2 ON e.target_id = s2.id
+WHERE e.project_id = $1 AND s1.language != s2.language;
+
 -- Namespace-level stats (extract namespace from qualified_name)
 -- name: GetNamespaceStats :many
 SELECT

@@ -82,6 +82,7 @@ func main() {
 	analyzeImpact := tools.NewAnalyzeImpactHandler(s, logger)
 	getProjectAnalytics := tools.NewGetProjectAnalyticsHandler(s, logger)
 	semanticSearch := tools.NewSemanticSearchHandler(s, embedder, logger)
+	traceCrossLang := tools.NewTraceCrossLanguageHandler(s, logger)
 
 	// SDK MCP server
 	sdkServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "lattice", Version: "1.0.0"}, nil)
@@ -126,6 +127,11 @@ func main() {
 		Name:        "semantic_search",
 		Description: "Search symbols using natural language via vector embeddings. Finds conceptually similar symbols even without exact name matches. Requires embedding provider to be configured.",
 	}, tools.WrapHandler[tools.SemanticSearchParams](semanticSearch))
+
+	sdkmcp.AddTool(sdkServer, &sdkmcp.Tool{
+		Name:        "trace_cross_language",
+		Description: "Trace cross-language paths from a symbol, showing how code flows across language boundaries (e.g., TypeScript → C# → SQL). Groups results by stack layer with confidence scores.",
+	}, tools.WrapHandler[tools.TraceCrossLanguageParams](traceCrossLang))
 
 	// Use Stateless mode so that stale session IDs from server restarts (hot-reload)
 	// are ignored rather than returning 404. Each request gets a pre-initialized

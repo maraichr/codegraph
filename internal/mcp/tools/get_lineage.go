@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -61,9 +62,10 @@ func (h *GetLineageHandler) Handle(ctx context.Context, params GetLineageParams)
 
 	// BFS lineage traversal
 	type lineageNode struct {
-		Symbol postgres.Symbol
-		Depth  int
-		Via    string // edge type that led here
+		Symbol     postgres.Symbol
+		Depth      int
+		Via        string  // edge type that led here
+		Confidence float64 // from edge metadata, 0 = unknown
 	}
 
 	visited := map[uuid.UUID]bool{seed.ID: true}
@@ -91,7 +93,7 @@ func (h *GetLineageHandler) Handle(ctx context.Context, params GetLineageParams)
 				if err != nil {
 					continue
 				}
-				node := lineageNode{Symbol: sym, Depth: cur.Depth + 1, Via: e.EdgeType}
+				node := lineageNode{Symbol: sym, Depth: cur.Depth + 1, Via: e.EdgeType, Confidence: extractEdgeConfidence(e.Metadata)}
 				upstream = append(upstream, node)
 				queue = append(queue, node)
 			}
@@ -124,7 +126,7 @@ func (h *GetLineageHandler) Handle(ctx context.Context, params GetLineageParams)
 				if err != nil {
 					continue
 				}
-				node := lineageNode{Symbol: sym, Depth: cur.Depth + 1, Via: e.EdgeType}
+				node := lineageNode{Symbol: sym, Depth: cur.Depth + 1, Via: e.EdgeType, Confidence: extractEdgeConfidence(e.Metadata)}
 				downstream = append(downstream, node)
 				queue = append(queue, node)
 			}
@@ -138,11 +140,12 @@ func (h *GetLineageHandler) Handle(ctx context.Context, params GetLineageParams)
 	if len(upstream) > 0 {
 		rb.AddLine("### Upstream (data sources / callers)")
 		for _, n := range upstream {
-			indent := ""
-			for i := 0; i < n.Depth; i++ {
-				indent += "  "
+			indent := strings.Repeat("  ", n.Depth)
+			confStr := ""
+			if n.Confidence > 0 {
+				confStr = fmt.Sprintf(", confidence: %.2f", n.Confidence)
 			}
-			rb.AddLine(fmt.Sprintf("%s- %s `%s` [%s] (via %s)", indent, n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.Via))
+			rb.AddLine(fmt.Sprintf("%s- %s `%s` [%s] (via %s%s)", indent, n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.Via, confStr))
 		}
 		rb.AddLine("")
 	}
@@ -150,11 +153,12 @@ func (h *GetLineageHandler) Handle(ctx context.Context, params GetLineageParams)
 	if len(downstream) > 0 {
 		rb.AddLine("### Downstream (consumers / dependents)")
 		for _, n := range downstream {
-			indent := ""
-			for i := 0; i < n.Depth; i++ {
-				indent += "  "
+			indent := strings.Repeat("  ", n.Depth)
+			confStr := ""
+			if n.Confidence > 0 {
+				confStr = fmt.Sprintf(", confidence: %.2f", n.Confidence)
 			}
-			rb.AddLine(fmt.Sprintf("%s- %s `%s` [%s] (via %s)", indent, n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.Via))
+			rb.AddLine(fmt.Sprintf("%s- %s `%s` [%s] (via %s%s)", indent, n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.Via, confStr))
 		}
 		rb.AddLine("")
 	}

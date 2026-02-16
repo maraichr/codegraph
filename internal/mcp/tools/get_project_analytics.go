@@ -55,8 +55,10 @@ func (h *GetProjectAnalyticsHandler) Handle(ctx context.Context, params GetProje
 		return h.handleLayers(ctx, project, rb)
 	case "bridges":
 		return h.handleBridges(ctx, project, rb)
+	case "bridge_coverage":
+		return h.handleBridgeCoverage(ctx, project, rb)
 	default:
-		return "", fmt.Errorf("unknown scope: %s (valid: summary, languages, kinds, layers, bridges)", params.Scope)
+		return "", fmt.Errorf("unknown scope: %s (valid: summary, languages, kinds, layers, bridges, bridge_coverage)", params.Scope)
 	}
 }
 
@@ -167,4 +169,39 @@ func (h *GetProjectAnalyticsHandler) handleBridges(ctx context.Context, project 
 	}
 
 	return rb.Finalize(len(rows), len(rows)), nil
+}
+
+func (h *GetProjectAnalyticsHandler) handleBridgeCoverage(ctx context.Context, project postgres.Project, rb *mcp.ResponseBuilder) (string, error) {
+	rb.AddHeader(fmt.Sprintf("**Project Analytics: %s** (bridge coverage)", project.Name))
+
+	// Try pre-computed analytics first
+	analytics, err := h.store.GetProjectAnalytics(ctx, postgres.GetProjectAnalyticsParams{
+		ProjectID: project.ID,
+		Scope:     "project",
+		ScopeID:   "bridge_coverage",
+	})
+	if err == nil && analytics.Summary != nil {
+		rb.AddLine(*analytics.Summary)
+		return rb.Finalize(1, 1), nil
+	}
+
+	// Fall back to live query
+	stats, err := h.store.GetBridgeCoverageStats(ctx, project.ID)
+	if err != nil {
+		return "", fmt.Errorf("get bridge coverage: %w", err)
+	}
+
+	if stats.TotalCrossLangEdges == 0 {
+		rb.AddLine("No cross-language edges found.")
+		return rb.Finalize(0, 0), nil
+	}
+
+	rb.AddLine(fmt.Sprintf("- **Total cross-language edges:** %d", stats.TotalCrossLangEdges))
+	rb.AddLine(fmt.Sprintf("- **Edges with confidence:** %d", stats.EdgesWithConfidence))
+	if v, ok := stats.AvgConfidence.(float64); ok {
+		rb.AddLine(fmt.Sprintf("- **Average confidence:** %.2f", v))
+	}
+	rb.AddLine(fmt.Sprintf("- **Low confidence (<0.8):** %d", stats.LowConfidenceEdges))
+
+	return rb.Finalize(1, 1), nil
 }

@@ -49,7 +49,8 @@ func extractComponents(content string) []DFMComponent {
 
 	// Match: object ComponentName: TClassName
 	objectRe := regexp.MustCompile(`(?m)^\s*object\s+(\w+):\s*(\w+)`)
-	sqlStringsRe := regexp.MustCompile(`(?i)SQL\.Strings\s*=\s*\(`)
+	sqlStringsRe := regexp.MustCompile(`(?i)(SQL\.Strings|SelectSQL\.Strings|SQL\.Text)\s*=\s*\(`)
+	commandTextRe := regexp.MustCompile(`(?i)CommandText\s*=\s*'(.+?)'`)
 
 	lines := strings.Split(content, "\n")
 
@@ -78,11 +79,19 @@ func extractComponents(content string) []DFMComponent {
 			continue
 		}
 
-		// Detect SQL.Strings property
+		// Detect SQL.Strings / SelectSQL.Strings / SQL.Text multi-line property
 		if current != nil && sqlStringsRe.MatchString(trimmed) {
 			inSQLStrings = true
 			sqlBuilder.Reset()
 			continue
+		}
+
+		// Detect CommandText = 'SQL string' (single-line)
+		if current != nil {
+			if m := commandTextRe.FindStringSubmatch(trimmed); len(m) >= 2 {
+				current.SQL = append(current.SQL, m[1])
+				continue
+			}
 		}
 
 		if inSQLStrings {

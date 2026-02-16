@@ -53,10 +53,11 @@ type Symbol struct {
 
 // RawReference represents an unresolved reference from one symbol to another.
 type RawReference struct {
-	FromSymbol    string // qualified name of the source symbol
-	ToName        string // name being referenced (may be unqualified)
-	ToQualified   string // qualified name if available
-	ReferenceType string // calls, reads_from, writes_to, uses_table, etc.
+	FromSymbol    string  // qualified name of the source symbol
+	ToName        string  // name being referenced (may be unqualified)
+	ToQualified   string  // qualified name if available
+	ReferenceType string  // calls, reads_from, writes_to, uses_table, etc.
+	Confidence    float64 // 0 = not set (treated as 1.0), otherwise 0.0-1.0
 	Line          int
 	Col           int
 }

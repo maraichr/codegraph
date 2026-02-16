@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -113,26 +114,53 @@ func (e *Engine) Resolve(ctx context.Context, projectID uuid.UUID, parseResults 
 			}
 
 			// Try to resolve the target
-			targetID, resolved := resolveTarget(ref, localScope, table, e.crossLang, fr.Language)
-			if !resolved {
+			result := resolveTarget(ref, localScope, table, e.crossLang, fr.Language)
+			if !result.Resolved {
 				continue
 			}
 
 			// Skip self-references
-			if sourceID == targetID {
+			if sourceID == result.TargetID {
 				continue
 			}
 
-			// Create edge in PG
-			_, err := e.store.CreateSymbolEdge(ctx, postgres.CreateSymbolEdgeParams{
-				ProjectID: projectID,
-				SourceID:  sourceID,
-				TargetID:  targetID,
-				EdgeType:  ref.ReferenceType,
-			})
-			if err != nil {
-				// ON CONFLICT DO NOTHING — edge may already exist from parse stage
-				continue
+			// Determine confidence: use ref's confidence if set, otherwise from resolution
+			confidence := result.Confidence
+			if ref.Confidence > 0 && confidence > 0 {
+				// Multiply parser confidence with resolution confidence
+				confidence = ref.Confidence * confidence
+			} else if ref.Confidence > 0 {
+				confidence = ref.Confidence
+			}
+
+			// Use CreateSymbolEdgeWithMetadata for cross-language edges with confidence
+			if result.CrossLang {
+				meta := map[string]interface{}{
+					"confidence":     confidence,
+					"match_strategy": result.Strategy,
+					"bridge":         result.Bridge,
+				}
+				metaJSON, _ := json.Marshal(meta)
+				_, err := e.store.CreateSymbolEdgeWithMetadata(ctx, postgres.CreateSymbolEdgeWithMetadataParams{
+					ProjectID: projectID,
+					SourceID:  sourceID,
+					TargetID:  result.TargetID,
+					EdgeType:  ref.ReferenceType,
+					Metadata:  metaJSON,
+				})
+				if err != nil {
+					continue
+				}
+			} else {
+				_, err := e.store.CreateSymbolEdge(ctx, postgres.CreateSymbolEdgeParams{
+					ProjectID: projectID,
+					SourceID:  sourceID,
+					TargetID:  result.TargetID,
+					EdgeType:  ref.ReferenceType,
+				})
+				if err != nil {
+					continue
+				}
 			}
 			created++
 		}
@@ -145,48 +173,65 @@ func (e *Engine) Resolve(ctx context.Context, projectID uuid.UUID, parseResults 
 	return created, nil
 }
 
+// resolveResult holds the outcome of target resolution.
+type resolveResult struct {
+	TargetID   uuid.UUID
+	Confidence float64 // 0 = not set (same-language, treated as 1.0)
+	Strategy   string
+	Bridge     string
+	CrossLang  bool
+	Resolved   bool
+}
+
 // resolveTarget attempts to find the target symbol for a reference.
 // Resolution order: qualified name → file-local scope → project-wide short name → case-insensitive → cross-language.
-func resolveTarget(ref parser.RawReference, localScope map[string]uuid.UUID, table *SymbolTable, crossLang *CrossLangResolver, sourceLang string) (uuid.UUID, bool) {
+func resolveTarget(ref parser.RawReference, localScope map[string]uuid.UUID, table *SymbolTable, crossLang *CrossLangResolver, sourceLang string) resolveResult {
 	// 1. Try fully qualified name
 	if ref.ToQualified != "" {
 		if id, ok := table.ByFQN[ref.ToQualified]; ok {
-			return id, true
+			return resolveResult{TargetID: id, Confidence: 1.0, Resolved: true}
 		}
 	}
 
 	// 2. Try the target name in local scope (already resolved in parse stage, but try anyway)
 	if id, ok := localScope[ref.ToName]; ok {
-		return id, true
+		return resolveResult{TargetID: id, Confidence: 1.0, Resolved: true}
 	}
 	if ref.ToQualified != "" {
 		if id, ok := localScope[ref.ToQualified]; ok {
-			return id, true
+			return resolveResult{TargetID: id, Confidence: 1.0, Resolved: true}
 		}
 	}
 
 	// 3. Try project-wide by short name (if unambiguous)
 	candidates := table.ByShortName[ref.ToName]
 	if len(candidates) == 1 {
-		return candidates[0], true
+		return resolveResult{TargetID: candidates[0], Confidence: 1.0, Resolved: true}
 	}
 
 	// 4. Try case-insensitive FQN match (SQL is often case-insensitive)
 	lowerTarget := strings.ToLower(ref.ToName)
 	for fqn, id := range table.ByFQN {
 		if strings.ToLower(shortNameOf(fqn)) == lowerTarget {
-			return id, true
+			return resolveResult{TargetID: id, Confidence: 1.0, Resolved: true}
 		}
 	}
 
 	// 5. Try cross-language resolution
 	if crossLang != nil && sourceLang != "" {
-		if id, ok := crossLang.Resolve(ref, sourceLang, table); ok {
-			return id, true
+		if match, ok := crossLang.Resolve(ref, sourceLang, table); ok {
+			return resolveResult{
+				TargetID:   match.TargetID,
+				Confidence: match.Confidence,
+				Strategy:   match.Strategy,
+				Bridge:     match.Bridge,
+				CrossLang:  true,
+				Resolved:   true,
+			}
 		}
 	}
 
-	return uuid.Nil, false
+	return resolveResult{}
 }
 
 // shortNameOf extracts the short name from a qualified name.

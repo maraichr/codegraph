@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/maraichr/lattice/internal/parser"
+	"github.com/maraichr/lattice/internal/parser/sqlutil"
 )
 
 // Parser implements a parser for Delphi/Object Pascal files.
@@ -183,10 +184,166 @@ func parsePascal(input parser.FileInput) (*parser.ParseResult, error) {
 
 	_ = inInterface // used above
 
+	// Post-pass: extract SQL references from Pascal source
+	sqlRefs := extractPascalSQLRefs(lines, symbols)
+	refs = append(refs, sqlRefs...)
+
 	return &parser.ParseResult{
 		Symbols:    symbols,
 		References: refs,
 	}, nil
+}
+
+// extractPascalSQLRefs detects SQL patterns in Delphi/Pascal source code:
+// SQL.Text assignment, SQL.Add accumulation, CommandText assignment, ExecSQL/Open.
+func extractPascalSQLRefs(lines []string, symbols []parser.Symbol) []parser.RawReference {
+	var refs []parser.RawReference
+
+	// Build procedure/function ranges for FromSymbol resolution
+	findEnclosing := func(lineNum int) string {
+		best := ""
+		bestSpan := 1<<31 - 1
+		for _, s := range symbols {
+			if (s.Kind == "procedure" || s.Kind == "function" || s.Kind == "method") &&
+				lineNum >= s.StartLine && lineNum <= s.EndLine {
+				span := s.EndLine - s.StartLine
+				if span < bestSpan {
+					bestSpan = span
+					best = s.QualifiedName
+				}
+			}
+		}
+		return best
+	}
+
+	// Regex patterns for SQL assignments
+	sqlTextAssign := regexp.MustCompile(`(?i)(\w+)\.SQL\.Text\s*:=\s*(.+)`)
+	sqlAdd := regexp.MustCompile(`(?i)(\w+)\.SQL\.Add\s*\(\s*'(.+?)'\s*\)`)
+	commandTextAssign := regexp.MustCompile(`(?i)(\w+)\.CommandText\s*:=\s*'(.+?)'`)
+
+	// Multi-line SQL.Text concatenation tracking
+	var sqlTextBuilder strings.Builder
+	sqlTextComponent := ""
+	sqlTextStartLine := 0
+	inSQLConcat := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		lineNum := i + 1
+
+		// SQL.Text := 'SELECT * FROM ...'
+		// May be multi-line: SQL.Text := 'SELECT * ' + #13#10 + 'FROM table'
+		if m := sqlTextAssign.FindStringSubmatch(trimmed); len(m) >= 3 {
+			component := m[1]
+			rest := m[2]
+
+			// Extract string parts from the assignment
+			sqlStr := extractPascalStrings(rest)
+			if isContinued(rest) {
+				// Multi-line concatenation
+				sqlTextBuilder.Reset()
+				sqlTextBuilder.WriteString(sqlStr)
+				sqlTextComponent = component
+				sqlTextStartLine = lineNum
+				inSQLConcat = true
+			} else {
+				if sqlutil.LooksLikeSQL(sqlStr) {
+					from := findEnclosing(lineNum)
+					tableRefs := sqlutil.ExtractTableRefs(sqlStr, lineNum, from, "dbo")
+					for j := range tableRefs {
+						tableRefs[j].Confidence = 0.9
+					}
+					refs = append(refs, tableRefs...)
+				}
+			}
+			continue
+		}
+
+		// Continue multi-line concatenation
+		if inSQLConcat {
+			sqlStr := extractPascalStrings(trimmed)
+			sqlTextBuilder.WriteString(" " + sqlStr)
+			if !isContinued(trimmed) {
+				inSQLConcat = false
+				fullSQL := sqlTextBuilder.String()
+				if sqlutil.LooksLikeSQL(fullSQL) {
+					from := findEnclosing(sqlTextStartLine)
+					tableRefs := sqlutil.ExtractTableRefs(fullSQL, sqlTextStartLine, from, "dbo")
+					for j := range tableRefs {
+						tableRefs[j].Confidence = 0.85
+					}
+					refs = append(refs, tableRefs...)
+				}
+				_ = sqlTextComponent
+			}
+			continue
+		}
+
+		// SQL.Add('...')
+		if m := sqlAdd.FindStringSubmatch(trimmed); len(m) >= 3 {
+			sqlStr := m[2]
+			if sqlutil.LooksLikeSQL(sqlStr) {
+				from := findEnclosing(lineNum)
+				tableRefs := sqlutil.ExtractTableRefs(sqlStr, lineNum, from, "dbo")
+				for j := range tableRefs {
+					tableRefs[j].Confidence = 0.85
+				}
+				refs = append(refs, tableRefs...)
+			}
+			continue
+		}
+
+		// CommandText := 'EXEC dbo.GetUser' or CommandText := 'SELECT ...'
+		if m := commandTextAssign.FindStringSubmatch(trimmed); len(m) >= 3 {
+			sqlStr := m[2]
+			from := findEnclosing(lineNum)
+			if sqlutil.LooksLikeSQL(sqlStr) {
+				tableRefs := sqlutil.ExtractTableRefs(sqlStr, lineNum, from, "dbo")
+				for j := range tableRefs {
+					tableRefs[j].Confidence = 0.9
+				}
+				refs = append(refs, tableRefs...)
+			}
+		}
+	}
+
+	return refs
+}
+
+// extractPascalStrings extracts string content from Pascal string expressions.
+// Handles: 'string literal', concatenation with +, #13#10 line breaks.
+func extractPascalStrings(expr string) string {
+	var result strings.Builder
+	i := 0
+	for i < len(expr) {
+		if expr[i] == '\'' {
+			// Find closing quote (Pascal uses '' for escaped single quote)
+			end := i + 1
+			for end < len(expr) {
+				if expr[end] == '\'' {
+					if end+1 < len(expr) && expr[end+1] == '\'' {
+						end += 2 // escaped quote
+						continue
+					}
+					break
+				}
+				end++
+			}
+			if end < len(expr) {
+				result.WriteString(strings.ReplaceAll(expr[i+1:end], "''", "'"))
+			}
+			i = end + 1
+		} else {
+			i++
+		}
+	}
+	return result.String()
+}
+
+// isContinued checks if a Pascal line continues (ends with + or has continuation chars).
+func isContinued(line string) bool {
+	trimmed := strings.TrimRight(strings.TrimSpace(line), " ;")
+	return strings.HasSuffix(trimmed, "+")
 }
 
 type classDecl struct {

@@ -8,6 +8,7 @@ import (
 	"github.com/smacker/go-tree-sitter/java"
 
 	"github.com/maraichr/lattice/internal/parser"
+	"github.com/maraichr/lattice/internal/parser/sqlutil"
 )
 
 // Parser implements a tree-sitter based Java parser.
@@ -76,6 +77,14 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 	// Process annotations for Spring/JPA detection
 	annoRefs := extractAnnotationRefs(root, input.Content, packageName)
 	refs = append(refs, annoRefs...)
+
+	// JDBC PreparedStatement/prepareCall detection
+	jdbcRefs := extractJDBCRefs(root, input.Content, symbols)
+	refs = append(refs, jdbcRefs...)
+
+	// @NamedQuery / @NamedNativeQuery detection
+	namedQueryRefs := extractNamedQueryRefs(root, input.Content, packageName)
+	refs = append(refs, namedQueryRefs...)
 
 	return &parser.ParseResult{
 		Symbols:    symbols,
@@ -196,6 +205,25 @@ func extractInterface(node *sitter.Node, src []byte, pkg string) ([]parser.Symbo
 		StartLine:     int(node.StartPoint().Row) + 1,
 		EndLine:       int(node.EndPoint().Row) + 1,
 	})
+
+	// Detect Spring Data repository interfaces
+	entityType := extractSpringDataEntity(node, src)
+	if entityType != "" {
+		refs = append(refs, parser.RawReference{
+			FromSymbol:    qname,
+			ToName:        entityType,
+			ReferenceType: "uses_table",
+			Confidence:    0.7,
+			Line:          int(node.StartPoint().Row) + 1,
+		})
+
+		// Extract derived query methods (findBy*, countBy*, deleteBy*)
+		body := findChild(node, "interface_body")
+		if body != nil {
+			derivedRefs := extractDerivedQueryMethods(body, src, qname, entityType)
+			refs = append(refs, derivedRefs...)
+		}
+	}
 
 	return symbols, refs
 }
@@ -510,4 +538,164 @@ func isSQLKeyword(s string) bool {
 		"ON": true, "IN": true, "NOT": true, "NULL": true,
 	}
 	return kw[strings.ToUpper(s)]
+}
+
+// extractJDBCRefs detects JDBC PreparedStatement and prepareCall patterns.
+func extractJDBCRefs(root *sitter.Node, src []byte, symbols []parser.Symbol) []parser.RawReference {
+	var refs []parser.RawReference
+
+	// Build symbol ranges for FromSymbol resolution
+	findEnclosing := func(line int) string {
+		best := ""
+		bestSpan := 1<<31 - 1
+		for _, s := range symbols {
+			if (s.Kind == "method" || s.Kind == "function" || s.Kind == "class") &&
+				line >= s.StartLine && line <= s.EndLine {
+				span := s.EndLine - s.StartLine
+				if span < bestSpan {
+					bestSpan = span
+					best = s.QualifiedName
+				}
+			}
+		}
+		return best
+	}
+
+	walkTree(root, func(node *sitter.Node) {
+		if node.Type() != "method_invocation" {
+			return
+		}
+
+		line := int(node.StartPoint().Row) + 1
+
+		// Get method name
+		methodName := ""
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "identifier" {
+				methodName = child.Content(src)
+			}
+		}
+
+		switch methodName {
+		case "prepareStatement", "prepareCall":
+			args := findChild(node, "argument_list")
+			if args == nil {
+				return
+			}
+			sqlStr := extractFirstStringLiteral(args, src)
+			if sqlStr == "" {
+				return
+			}
+			from := findEnclosing(line)
+			if sqlutil.LooksLikeSQL(sqlStr) {
+				tableRefs := sqlutil.ExtractTableRefs(sqlStr, line, from, "")
+				for i := range tableRefs {
+					tableRefs[i].Confidence = 0.9
+				}
+				refs = append(refs, tableRefs...)
+			}
+		}
+	})
+
+	return refs
+}
+
+// extractNamedQueryRefs detects @NamedQuery and @NamedNativeQuery annotations.
+func extractNamedQueryRefs(root *sitter.Node, src []byte, pkg string) []parser.RawReference {
+	var refs []parser.RawReference
+
+	walkTree(root, func(node *sitter.Node) {
+		if node.Type() != "annotation" {
+			return
+		}
+
+		annoText := node.Content(src)
+		if !strings.Contains(annoText, "NamedQuery") && !strings.Contains(annoText, "NamedNativeQuery") {
+			return
+		}
+
+		line := int(node.StartPoint().Row) + 1
+		query := extractAnnotationParam(annoText, "query")
+		if query != "" && looksLikeSQL(query) {
+			tableRefs := extractSQLTableRefs(query, line)
+			for i := range tableRefs {
+				tableRefs[i].Confidence = 0.9
+			}
+			refs = append(refs, tableRefs...)
+		}
+	})
+
+	return refs
+}
+
+// extractSpringDataEntity detects if an interface extends JpaRepository<T, ID>
+// or CrudRepository<T, ID> and returns the entity type name T.
+func extractSpringDataEntity(node *sitter.Node, src []byte) string {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "extends_interfaces" {
+			for j := 0; j < int(child.ChildCount()); j++ {
+				typeNode := child.Child(j)
+				text := typeNode.Content(src)
+				// Check for JpaRepository<T, ...> or CrudRepository<T, ...>
+				for _, repo := range []string{"JpaRepository", "CrudRepository", "PagingAndSortingRepository", "ReactiveCrudRepository"} {
+					if strings.HasPrefix(text, repo+"<") {
+						// Extract T from Repository<T, ID>
+						start := strings.IndexByte(text, '<')
+						end := strings.IndexAny(text[start+1:], ",>")
+						if start >= 0 && end >= 0 {
+							return strings.TrimSpace(text[start+1 : start+1+end])
+						}
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// extractDerivedQueryMethods parses Spring Data derived query method names.
+func extractDerivedQueryMethods(body *sitter.Node, src []byte, fromSymbol, entityType string) []parser.RawReference {
+	var refs []parser.RawReference
+
+	for i := 0; i < int(body.ChildCount()); i++ {
+		child := body.Child(i)
+		if child.Type() != "method_declaration" {
+			continue
+		}
+		name, _ := extractMethodDecl(child, src)
+		if name == "" {
+			continue
+		}
+		// Detect derived queries: findBy*, countBy*, deleteBy*, existsBy*
+		for _, prefix := range []string{"findBy", "countBy", "deleteBy", "existsBy", "readBy", "getBy", "queryBy"} {
+			if strings.HasPrefix(name, prefix) {
+				refs = append(refs, parser.RawReference{
+					FromSymbol:    fromSymbol + "." + name,
+					ToName:        entityType,
+					ReferenceType: "uses_table",
+					Confidence:    0.7,
+					Line:          int(child.StartPoint().Row) + 1,
+				})
+				break
+			}
+		}
+	}
+
+	return refs
+}
+
+// extractFirstStringLiteral returns the first string literal from an argument list.
+func extractFirstStringLiteral(args *sitter.Node, src []byte) string {
+	for i := 0; i < int(args.ChildCount()); i++ {
+		child := args.Child(i)
+		if child.Type() == "string_literal" {
+			text := child.Content(src)
+			if len(text) >= 2 {
+				return text[1 : len(text)-1]
+			}
+		}
+	}
+	return ""
 }

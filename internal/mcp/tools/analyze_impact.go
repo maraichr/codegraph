@@ -61,9 +61,10 @@ func (h *AnalyzeImpactHandler) Handle(ctx context.Context, params AnalyzeImpactP
 
 	// BFS downstream to find all affected symbols
 	type impactNode struct {
-		Symbol   postgres.Symbol
-		Depth    int
-		EdgeType string
+		Symbol     postgres.Symbol
+		Depth      int
+		EdgeType   string
+		Confidence float64
 	}
 
 	visited := map[uuid.UUID]bool{seed.ID: true}
@@ -90,7 +91,7 @@ func (h *AnalyzeImpactHandler) Handle(ctx context.Context, params AnalyzeImpactP
 			if err != nil {
 				continue
 			}
-			node := impactNode{Symbol: sym, Depth: cur.Depth + 1, EdgeType: e.EdgeType}
+			node := impactNode{Symbol: sym, Depth: cur.Depth + 1, EdgeType: e.EdgeType, Confidence: extractEdgeConfidence(e.Metadata)}
 			if cur.Depth == 0 {
 				direct = append(direct, node)
 			} else {
@@ -111,7 +112,7 @@ func (h *AnalyzeImpactHandler) Handle(ctx context.Context, params AnalyzeImpactP
 		if err != nil {
 			continue
 		}
-		callers = append(callers, impactNode{Symbol: sym, Depth: 1, EdgeType: e.EdgeType})
+		callers = append(callers, impactNode{Symbol: sym, Depth: 1, EdgeType: e.EdgeType, Confidence: extractEdgeConfidence(e.Metadata)})
 	}
 
 	// Format response
@@ -127,8 +128,12 @@ func (h *AnalyzeImpactHandler) Handle(ctx context.Context, params AnalyzeImpactP
 		rb.AddLine("### Direct Impact")
 		for _, n := range direct {
 			severity := classifyImpactSeverity(params.ChangeType, n.EdgeType)
-			rb.AddLine(fmt.Sprintf("- %s `%s` [%s] via %s — **%s**",
-				n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.EdgeType, severity))
+			confStr := ""
+			if n.Confidence > 0 {
+				confStr = fmt.Sprintf(", confidence: %.2f", n.Confidence)
+			}
+			rb.AddLine(fmt.Sprintf("- %s `%s` [%s] via %s%s — **%s**",
+				n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.EdgeType, confStr, severity))
 		}
 		rb.AddLine("")
 	}
@@ -136,8 +141,12 @@ func (h *AnalyzeImpactHandler) Handle(ctx context.Context, params AnalyzeImpactP
 	if len(transitive) > 0 {
 		rb.AddLine("### Transitive Impact")
 		for _, n := range transitive {
-			rb.AddLine(fmt.Sprintf("- %s `%s` [%s] (depth %d, via %s)",
-				n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.Depth, n.EdgeType))
+			confStr := ""
+			if n.Confidence > 0 {
+				confStr = fmt.Sprintf(", confidence: %.2f", n.Confidence)
+			}
+			rb.AddLine(fmt.Sprintf("- %s `%s` [%s] (depth %d, via %s%s)",
+				n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.Depth, n.EdgeType, confStr))
 		}
 		rb.AddLine("")
 	}
@@ -145,8 +154,12 @@ func (h *AnalyzeImpactHandler) Handle(ctx context.Context, params AnalyzeImpactP
 	if len(callers) > 0 {
 		rb.AddLine("### Callers / References (will need updating)")
 		for _, n := range callers {
-			rb.AddLine(fmt.Sprintf("- %s `%s` [%s] via %s",
-				n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.EdgeType))
+			confStr := ""
+			if n.Confidence > 0 {
+				confStr = fmt.Sprintf(", confidence: %.2f", n.Confidence)
+			}
+			rb.AddLine(fmt.Sprintf("- %s `%s` [%s] via %s%s",
+				n.Symbol.Kind, n.Symbol.Name, n.Symbol.Language, n.EdgeType, confStr))
 		}
 	}
 

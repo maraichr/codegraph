@@ -553,6 +553,64 @@ namespace MyApp {
 	}
 }
 
+func TestEFNavigationCollection(t *testing.T) {
+	src := `
+namespace MyApp.Models {
+    public class Customer {
+        public int Id { get; set; }
+        public virtual ICollection<Order> Orders { get; set; }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Customer.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refRefs := filterRefs(result.References, "references")
+	assertRefTarget(t, refRefs, "Order")
+}
+
+func TestEFNavigationSingle(t *testing.T) {
+	src := `
+namespace MyApp.Models {
+    public class Order {
+        public int Id { get; set; }
+        public virtual Customer Customer { get; set; }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "Order.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refRefs := filterRefs(result.References, "references")
+	assertRefTarget(t, refRefs, "Customer")
+}
+
+func TestIncludeStringArg(t *testing.T) {
+	src := `
+namespace MyApp.Data {
+    public class UserRepository {
+        public User GetWithOrders(int id) {
+            return context.Users.Include("Orders").FirstOrDefault(u => u.Id == id);
+        }
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserRepository.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refRefs := filterRefs(result.References, "references")
+	assertRefTarget(t, refRefs, "Orders")
+}
+
 // --- helpers ---
 
 func assertSymbol(t *testing.T, symbolMap map[string]parser.Symbol, qname, kind string) {
