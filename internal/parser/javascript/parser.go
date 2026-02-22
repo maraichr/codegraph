@@ -967,9 +967,20 @@ func extractObjectStringProp(args *sitter.Node, src []byte, prop string) string 
 						key = findChild(pair, "identifier")
 					}
 					if key != nil && key.Content(src) == prop {
-						val := findChild(pair, "string")
-						if val != nil {
-							return extractStringContent(val, src)
+						// Look for string, template_string, or binary_expression in the value
+						for k := 0; k < int(pair.ChildCount()); k++ {
+							val := pair.Child(k)
+							if val.Type() == "string" {
+								return extractStringContent(val, src)
+							}
+							if val.Type() == "template_string" {
+								return extractTemplateStringContent(val, src)
+							}
+							if val.Type() == "binary_expression" {
+								if s := extractStringPrefixFromBinaryExpr(val, src); s != "" {
+									return s + "{*}"
+								}
+							}
 						}
 					}
 				}
@@ -1126,7 +1137,8 @@ func (p *Parser) extractAPICallRefs(root *sitter.Node, src []byte, symbols []par
 		rootObj := extractRootIdentifier(memberExpr, src)
 		isHTTPClient := rootObj == "axios" || rootObj == "http" || rootObj == "https" ||
 			rootObj == "request" || rootObj == "got" || rootObj == "superagent" ||
-			rootObj == "ky" || rootObj == "wretch" || rootObj == "api"
+			rootObj == "ky" || rootObj == "wretch" || rootObj == "api" ||
+			rootObj == "$" || rootObj == "sf" || rootObj == "jQuery"
 
 		httpVerbs := map[string]string{
 			"get":     "GET",
@@ -1137,6 +1149,7 @@ func (p *Parser) extractAPICallRefs(root *sitter.Node, src []byte, symbols []par
 			"head":    "HEAD",
 			"options": "OPTIONS",
 			"request": "", // generic
+			"ajax":    "", // generic jQuery
 		}
 
 		verb, isVerb := httpVerbs[strings.ToLower(methodName)]
@@ -1150,7 +1163,7 @@ func (p *Parser) extractAPICallRefs(root *sitter.Node, src []byte, symbols []par
 			}
 
 			// axios({ method: "post", url: "/api/..." }) — config object form
-			if strings.ToLower(methodName) == "request" || rootObj == "axios" {
+			if strings.ToLower(methodName) == "request" || strings.ToLower(methodName) == "ajax" || rootObj == "axios" || rootObj == "$" || rootObj == "jQuery" {
 				if urlFromObj := extractObjectStringProp(args, src, "url"); urlFromObj != "" && looksLikeAPIPath(urlFromObj) {
 					verbFromObj := strings.ToUpper(extractObjectStringProp(args, src, "method"))
 					if verbFromObj == "" {
@@ -1214,11 +1227,11 @@ func extractStringPrefixFromBinaryExpr(node *sitter.Node, src []byte) string {
 		child := node.Child(i)
 		if child.Type() == "string" {
 			s := extractStringContent(child, src)
-			if strings.HasPrefix(s, "/") {
+			if s != "" {
 				return s
 			}
 		}
-		// Recurse in case of nested concatenation: ("/api/" + base) + id
+		// Recurse in case of nested concatenation: ("api/" + base) + id
 		if child.Type() == "binary_expression" {
 			if s := extractStringPrefixFromBinaryExpr(child, src); s != "" {
 				return s
@@ -1249,10 +1262,10 @@ func looksLikeAPIPath(s string) bool {
 		if !strings.Contains(s, "/api/") && !strings.Contains(s, "/v1/") && !strings.Contains(s, "/v2/") {
 			return false
 		}
-		// Strip the scheme+host for normalisation below
 		return true
 	}
-	return strings.HasPrefix(s, "/")
+	// If it's passed to fetch/axios/ajax, it's an API path even if relative.
+	return true
 }
 
 // normalizeAPIPath converts a raw URL string (possibly a template literal or

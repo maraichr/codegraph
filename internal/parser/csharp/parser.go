@@ -389,15 +389,31 @@ func extractMembers(body *sitter.Node, src []byte, ns, typeName string) ([]parse
 func extractMethodDecl(node *sitter.Node, src []byte) (string, string) {
 	name := ""
 	sig := ""
-	for i := 0; i < int(node.ChildCount()); i++ {
-		child := node.Child(i)
-		if child.Type() == "identifier" && name == "" {
-			name = child.Content(src)
-		}
-		if child.Type() == "parameter_list" {
-			sig = child.Content(src)
+	
+	nameNode := node.ChildByFieldName("name")
+	if nameNode != nil {
+		name = nameNode.Content(src)
+	} else {
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "identifier" && name == "" {
+				name = child.Content(src)
+			}
 		}
 	}
+
+	paramNode := node.ChildByFieldName("parameters")
+	if paramNode != nil {
+		sig = paramNode.Content(src)
+	} else {
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "parameter_list" {
+				sig = child.Content(src)
+			}
+		}
+	}
+	
 	return name, sig
 }
 
@@ -1176,7 +1192,7 @@ func extractASPNetEndpoints(root *sitter.Node, src []byte, ns string) []parser.S
 
 					// Build final routes by combining base paths with method path
 					for _, basePath := range info.basePaths {
-						route := buildRoute(verb, basePath, methodPath, strings.TrimSuffix(className, "Controller"))
+						route := buildRoute(verb, basePath, methodPath, strings.TrimSuffix(className, "Controller"), methodName)
 						sig := strings.TrimSpace(route)
 						sym := parser.Symbol{
 							Name:          methodName,
@@ -1199,10 +1215,15 @@ func extractASPNetEndpoints(root *sitter.Node, src []byte, ns string) []parser.S
 
 // buildRoute combines an HTTP verb, a controller base path, and a method-level
 // path into a single canonical route string like "GET /api/users/{id}".
-func buildRoute(verb, basePath, methodPath, controllerName string) string {
+func buildRoute(verb, basePath, methodPath, controllerName, methodName string) string {
 	// Expand [controller] and [action] tokens
 	base := strings.ReplaceAll(basePath, "[controller]", strings.ToLower(controllerName))
 	base = strings.ReplaceAll(base, "[Controller]", strings.ToLower(controllerName))
+	base = strings.ReplaceAll(base, "[action]", strings.ToLower(methodName))
+	base = strings.ReplaceAll(base, "[Action]", strings.ToLower(methodName))
+	
+	methodPath = strings.ReplaceAll(methodPath, "[action]", strings.ToLower(methodName))
+	methodPath = strings.ReplaceAll(methodPath, "[Action]", strings.ToLower(methodName))
 
 	// Prefix "api/" if the base path starts with [controller] expansion
 	if !strings.HasPrefix(base, "/") && !strings.HasPrefix(base, "api/") {

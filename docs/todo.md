@@ -24,6 +24,19 @@
 - [x] **Java parser: Spring MVC endpoint symbols** — `extractSpringEndpoints` detects `@RestController`/`@Controller` + `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping`, `@DeleteMapping`, `@RequestMapping`. Combines class-level `@RequestMapping` base paths with method-level paths. Emits `Kind: "endpoint"` symbols with `Signature: "VERB /path/{id}"`.
 - [x] **CrossLangResolver: `api_route_match` strategy** — Added `EndpointsBySignature()` to `SymbolLookup` interface. Normalized route comparison via `normalizeRouteForMatch` (lowercases, replaces `{param}`, `{*}`, `:param` → `{p}`). Bridge rules added for `javascript/typescript → csharp/java`. Production populates signatures via `ListEndpointSymbolsByProject`.
 
+## Parallel Embeddings
+
+- [x] **OpenRouter concurrent API requests** — `EmbedBatch` in `openrouter.go` now uses `errgroup.WithContext` with `SetLimit(10)` to fire up to 10 HTTP requests simultaneously. Chunks are pre-allocated by index so no mutex is required for result assembly.
+- [x] **Bedrock concurrent API requests** — Same pattern applied to `bedrock.go` with `SetLimit(8)` to stay within AWS SDK connection limits.
+- [x] **Bulk DB upserts via pgx batch** — `Store.UpsertSymbolEmbeddingsBatch` in `internal/store/store.go` pipelines up to 500 `INSERT … ON CONFLICT` statements per `pgx.Batch` `SendBatch` call, reducing N DB round-trips to ⌈N/500⌉.
+- [x] **EmbedSymbols pipeline** — `EmbedSymbols` in `embedding/batch.go` now collects symbol IDs and vectors into flat slices and calls `UpsertSymbolEmbeddingsBatch` once instead of one `Exec` per symbol.
+
+## DNN Parser Improvements
+
+- [x] **C# parser: Method name extraction** — Fixed `extractMethodDecl` so that methods with return types (like `HttpResponseMessage`) combined with attributes (like `[HttpGet]`) don't mistakenly get parsed with their return type as their name.
+- [x] **C# parser: Route template `[action]` expansion** — Updated `buildRoute` to accept `methodName` and expand `[action]` placeholders in route paths.
+- [x] **JS/TS parser: `$.ajax` and `sf.getServiceRoot` support** — Added support for `$.ajax`, `$.post`, etc. and DNN's `sf.getServiceRoot('module')` so the frontend calls to API endpoints are successfully parsed and normalised (e.g. `users/list{*}`).
+
 ## Possible follow-ups
 
 - Prefer canonical (non-migration) symbols when resolving FQNs in lineage (symbol metadata `is_migration`).

@@ -603,6 +603,49 @@ function createOrder(data) {
 	}
 }
 
+func TestJSAPICallJQueryAjax(t *testing.T) {
+	src := `
+function loadUsers() {
+	$.ajax({
+		url: "/api/users",
+		method: "GET",
+		success: function() {}
+	});
+}
+`
+	p := NewJS()
+	res, _ := p.Parse(parser.FileInput{Path: "test.js", Content: []byte(src)})
+	refs := filterRefs(res.References, "calls_api")
+	if len(refs) != 1 {
+		t.Fatalf("expected 1 calls_api, got %d", len(refs))
+	}
+	if refs[0].ToName != "GET /api/users" {
+		t.Errorf("expected GET /api/users, got %s", refs[0].ToName)
+	}
+}
+
+func TestJSAPICallDNNServiceFramework(t *testing.T) {
+	src := `
+function loadUsers() {
+	var sf = $.ServicesFramework(123);
+	$.ajax({
+		url: sf.getServiceRoot('module') + 'users/list',
+		method: "GET",
+		success: function() {}
+	});
+}
+`
+	p := NewJS()
+	res, _ := p.Parse(parser.FileInput{Path: "test.js", Content: []byte(src)})
+	refs := filterRefs(res.References, "calls_api")
+	if len(refs) != 1 {
+		t.Fatalf("expected 1 calls_api, got %d", len(refs))
+	}
+	if refs[0].ToName != "GET users/list{*}" {
+		t.Errorf("expected GET users/list{*}, got %s", refs[0].ToName)
+	}
+}
+
 // --- helpers ---
 
 func assertHasSymbol(t *testing.T, symbols []parser.Symbol, qname, kind string) {
