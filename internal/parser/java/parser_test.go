@@ -210,3 +210,88 @@ func assertRefTarget(t *testing.T, refs []parser.RawReference, target string) {
 	}
 	t.Errorf("missing ref target %s; have: %v", target, names)
 }
+
+// ---------------------------------------------------------------------------
+// Spring MVC endpoint extraction tests
+// ---------------------------------------------------------------------------
+
+func TestJavaSpringEndpointBasic(t *testing.T) {
+	src := `
+package com.example;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/orders")
+public class OrderController {
+    @GetMapping
+    public List<Order> getAll() { return null; }
+
+    @GetMapping("/{id}")
+    public Order getById(@PathVariable Long id) { return null; }
+
+    @PostMapping
+    public Order create(@RequestBody Order order) { return null; }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {}
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "OrderController.java", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpointMap := make(map[string]parser.Symbol)
+	for _, s := range result.Symbols {
+		if s.Kind == "endpoint" {
+			endpointMap[s.Signature] = s
+		}
+	}
+
+	if len(endpointMap) == 0 {
+		t.Fatal("expected endpoint symbols, got none")
+	}
+
+	wantRoutes := []string{
+		"GET /api/orders",
+		"GET /api/orders/{id}",
+		"POST /api/orders",
+		"DELETE /api/orders/{id}",
+	}
+	for _, want := range wantRoutes {
+		if _, ok := endpointMap[want]; !ok {
+			t.Errorf("missing endpoint %q; have: %v", want, endpointKeys(endpointMap))
+		}
+	}
+}
+
+func TestJavaSpringEndpointNoController(t *testing.T) {
+	src := `
+package com.example;
+
+public class UserService {
+    public User getUser(Long id) { return null; }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "UserService.java", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, s := range result.Symbols {
+		if s.Kind == "endpoint" {
+			t.Errorf("unexpected endpoint symbol %q on non-controller class", s.QualifiedName)
+		}
+	}
+}
+
+func endpointKeys(m map[string]parser.Symbol) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}

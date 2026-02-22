@@ -89,6 +89,11 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 	procRefs := extractStoredProcRefs(root, input.Content, classRanges)
 	refs = append(refs, procRefs...)
 
+	// Extract ASP.NET Core routing attributes ([Route], [HttpGet], [HttpPost], …)
+	// and emit endpoint symbols for cross-language API matching.
+	endpointSyms := extractASPNetEndpoints(root, input.Content, namespace)
+	symbols = append(symbols, endpointSyms...)
+
 	return &parser.ParseResult{
 		Symbols:    symbols,
 		References: refs,
@@ -1039,4 +1044,272 @@ func isSQLKeyword(s string) bool {
 		"ON": true, "IN": true, "NOT": true, "NULL": true,
 	}
 	return kw[strings.ToUpper(s)]
+}
+
+// ---------------------------------------------------------------------------
+// ASP.NET Core endpoint extraction
+// ---------------------------------------------------------------------------
+
+// aspVerbAttrs maps attribute names to HTTP verbs. An empty string means the
+// verb must be determined from the attribute value (e.g. [Route]).
+var aspVerbAttrs = map[string]string{
+	"HttpGet":     "GET",
+	"HttpPost":    "POST",
+	"HttpPut":     "PUT",
+	"HttpPatch":   "PATCH",
+	"HttpDelete":  "DELETE",
+	"HttpHead":    "HEAD",
+	"HttpOptions": "OPTIONS",
+	"Route":       "", // verb-agnostic; used at class level for base path
+}
+
+// extractASPNetEndpoints walks the tree and emits endpoint symbols for every
+// ASP.NET Core controller method decorated with a routing attribute.
+//
+// Each symbol has:
+//   Kind:          "endpoint"
+//   QualifiedName: "<Namespace>.<Controller>.<Method>"
+//   Signature:     "GET /api/orders/{id}"  — the normalized route
+func extractASPNetEndpoints(root *sitter.Node, src []byte, ns string) []parser.Symbol {
+	var endpoints []parser.Symbol
+
+	// Collect class-level base routes: class_declaration → attributes → [Route("base")]
+	type controllerInfo struct {
+		qname     string
+		basePaths []string // may be multiple [Route] attributes
+	}
+	controllers := map[string]*controllerInfo{} // name → info
+
+	walkTree(root, func(node *sitter.Node) {
+		if node.Type() != "class_declaration" {
+			return
+		}
+
+		className := ""
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "identifier" {
+				className = child.Content(src)
+				break
+			}
+		}
+		if className == "" {
+			return
+		}
+
+		// Only process Controller classes (ASP.NET convention)
+		if !strings.HasSuffix(className, "Controller") && !hasAttributeOnNode(node, src, "ApiController") {
+			return
+		}
+
+		qname := qualifyCSharp(ns, className)
+		info := &controllerInfo{qname: qname}
+		controllers[className] = info
+
+		// Collect class-level [Route("...")] attributes
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "attribute_list" {
+				walkTree(child, func(attr *sitter.Node) {
+					if attr.Type() != "attribute" {
+						return
+					}
+					attrName := extractAttrName(attr, src)
+					if attrName == "Route" || attrName == "RoutePrefix" {
+						path := extractAttrStringParam(attr, src)
+						if path != "" {
+							info.basePaths = append(info.basePaths, path)
+						}
+					}
+				})
+			}
+		}
+
+		// Default base path: [controller] → lowercase controller name without suffix
+		if len(info.basePaths) == 0 {
+			base := strings.TrimSuffix(className, "Controller")
+			info.basePaths = []string{"[controller]"}
+			_ = base
+		}
+
+		// Walk class body looking for method declarations with HTTP verb attributes
+		body := findChild(node, "declaration_list")
+		if body == nil {
+			return
+		}
+
+		for i := 0; i < int(body.ChildCount()); i++ {
+			member := body.Child(i)
+			if member.Type() != "method_declaration" {
+				continue
+			}
+
+			methodName := ""
+			for j := 0; j < int(member.ChildCount()); j++ {
+				mc := member.Child(j)
+				if mc.Type() == "identifier" {
+					methodName = mc.Content(src)
+					break
+				}
+			}
+			if methodName == "" {
+				continue
+			}
+
+			// Collect all routing attributes on this method
+			for j := 0; j < int(member.ChildCount()); j++ {
+				mc := member.Child(j)
+				if mc.Type() != "attribute_list" {
+					continue
+				}
+				walkTree(mc, func(attr *sitter.Node) {
+					if attr.Type() != "attribute" {
+						return
+					}
+					attrName := extractAttrName(attr, src)
+					verb, isRoutingAttr := aspVerbAttrs[attrName]
+					if !isRoutingAttr {
+						return
+					}
+
+					methodPath := extractAttrStringParam(attr, src)
+
+					// Build final routes by combining base paths with method path
+					for _, basePath := range info.basePaths {
+						route := buildRoute(verb, basePath, methodPath, strings.TrimSuffix(className, "Controller"))
+						sig := strings.TrimSpace(route)
+						sym := parser.Symbol{
+							Name:          methodName,
+							QualifiedName: qname + "." + methodName,
+							Kind:          "endpoint",
+							Language:      "csharp",
+							StartLine:     int(member.StartPoint().Row) + 1,
+							EndLine:       int(member.EndPoint().Row) + 1,
+							Signature:     sig,
+						}
+						endpoints = append(endpoints, sym)
+					}
+				})
+			}
+		}
+	})
+
+	return endpoints
+}
+
+// buildRoute combines an HTTP verb, a controller base path, and a method-level
+// path into a single canonical route string like "GET /api/users/{id}".
+func buildRoute(verb, basePath, methodPath, controllerName string) string {
+	// Expand [controller] and [action] tokens
+	base := strings.ReplaceAll(basePath, "[controller]", strings.ToLower(controllerName))
+	base = strings.ReplaceAll(base, "[Controller]", strings.ToLower(controllerName))
+
+	// Prefix "api/" if the base path starts with [controller] expansion
+	if !strings.HasPrefix(base, "/") && !strings.HasPrefix(base, "api/") {
+		base = "api/" + base
+	}
+
+	// Join base and method paths
+	combined := "/" + strings.Trim(base, "/")
+	if methodPath != "" {
+		combined = combined + "/" + strings.Trim(methodPath, "/")
+	}
+
+	// Normalise route parameters: {id:int} → {id}
+	combined = normalizeRouteParams(combined)
+
+	if verb == "" {
+		return combined
+	}
+	return verb + " " + combined
+}
+
+// normalizeRouteParams strips type constraints from ASP.NET route parameters.
+// e.g. {id:int} → {id}, {name:alpha:minlength(3)} → {name}
+func normalizeRouteParams(path string) string {
+	var out strings.Builder
+	i := 0
+	for i < len(path) {
+		if path[i] == '{' {
+			out.WriteByte('{')
+			i++
+			// Read until } keeping only the param name (before any :)
+			name := []byte{}
+			for i < len(path) && path[i] != '}' {
+				if path[i] == ':' {
+					// skip constraint
+					for i < len(path) && path[i] != '}' {
+						i++
+					}
+					break
+				}
+				name = append(name, path[i])
+				i++
+			}
+			out.Write(name)
+			out.WriteByte('}')
+			if i < len(path) {
+				i++ // skip '}'
+			}
+		} else {
+			out.WriteByte(path[i])
+			i++
+		}
+	}
+	return out.String()
+}
+
+// extractAttrName returns the name of an attribute node (e.g. "HttpGet" from [HttpGet("path")]).
+func extractAttrName(attr *sitter.Node, src []byte) string {
+	for i := 0; i < int(attr.ChildCount()); i++ {
+		child := attr.Child(i)
+		if child.Type() == "identifier" || child.Type() == "qualified_name" {
+			return child.Content(src)
+		}
+	}
+	return ""
+}
+
+// extractAttrStringParam extracts the first string literal parameter of an attribute.
+// Handles both positional ([HttpGet("/path")]) and named (value="...") forms.
+func extractAttrStringParam(attr *sitter.Node, src []byte) string {
+	for i := 0; i < int(attr.ChildCount()); i++ {
+		child := attr.Child(i)
+		if child.Type() == "attribute_argument_list" {
+			for j := 0; j < int(child.ChildCount()); j++ {
+				arg := child.Child(j)
+				if s := extractStringLiteral(arg, src); s != "" {
+					return s
+				}
+				// named argument: value = "..."
+				if arg.Type() == "attribute_argument" {
+					for k := 0; k < int(arg.ChildCount()); k++ {
+						if s := extractStringLiteral(arg.Child(k), src); s != "" {
+							return s
+						}
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// hasAttributeOnNode returns true if the node has an attribute list containing an attribute with the given name.
+func hasAttributeOnNode(node *sitter.Node, src []byte, attrName string) bool {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "attribute_list" {
+			found := false
+			walkTree(child, func(attr *sitter.Node) {
+				if attr.Type() == "attribute" && extractAttrName(attr, src) == attrName {
+					found = true
+				}
+			})
+			if found {
+				return true
+			}
+		}
+	}
+	return false
 }

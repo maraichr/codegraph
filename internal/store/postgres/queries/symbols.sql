@@ -84,3 +84,12 @@ WHERE project_id = (SELECT id FROM projects WHERE slug = @project_slug)
   AND (cardinality(@languages::text[]) = 0 OR language = ANY(@languages::text[]))
 ORDER BY (COALESCE(metadata->>'in_degree', '0'))::int DESC
 LIMIT @lim;
+
+-- name: ListSymbolsByQualifiedNames :many
+SELECT * FROM symbols WHERE project_id = $1 AND qualified_name = ANY($2::text[]);
+
+-- name: GetSymbolsByProjectPaged :many
+SELECT id, qualified_name, name, language, file_id FROM symbols
+WHERE project_id = $1
+ORDER BY id
+LIMIT $2 OFFSET $3;

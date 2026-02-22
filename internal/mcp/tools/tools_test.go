@@ -141,6 +141,47 @@ func contains(s, substr string) bool {
 	return false
 }
 
+// --- classifyIntent: cross-language ---
+
+func TestClassifyIntent_CrossLanguage(t *testing.T) {
+	tests := []string{
+		"what tables does this endpoint touch?",
+		"full stack trace of getUserById",
+		"who calls this stored procedure?",
+		"end to end from frontend to database",
+	}
+	for _, q := range tests {
+		if classifyIntent(q) != IntentCrossLanguage {
+			t.Errorf("expected IntentCrossLanguage for %q, got %s", q, classifyIntent(q))
+		}
+	}
+}
+
+func TestClassifyIntent_Ranking(t *testing.T) {
+	tests := []string{
+		"most used tables",
+		"top 10 functions",
+		"busiest endpoints",
+	}
+	for _, q := range tests {
+		if classifyIntent(q) != IntentRanking {
+			t.Errorf("expected IntentRanking for %q, got %s", q, classifyIntent(q))
+		}
+	}
+}
+
+func TestClassifyIntent_Bridges(t *testing.T) {
+	tests := []string{
+		"show me cross-language bridges",
+		"what bridges exist between languages?",
+	}
+	for _, q := range tests {
+		if classifyIntent(q) != IntentBridges {
+			t.Errorf("expected IntentBridges for %q, got %s", q, classifyIntent(q))
+		}
+	}
+}
+
 // --- isLowValue ---
 
 func TestIsLowValue_LowPageRankColumn(t *testing.T) {

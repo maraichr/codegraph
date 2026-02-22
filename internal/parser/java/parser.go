@@ -86,6 +86,10 @@ func (p *Parser) Parse(input parser.FileInput) (*parser.ParseResult, error) {
 	namedQueryRefs := extractNamedQueryRefs(root, input.Content, packageName)
 	refs = append(refs, namedQueryRefs...)
 
+	// Spring MVC/WebFlux endpoint extraction (@RestController + @GetMapping etc.)
+	endpointSyms := extractSpringEndpoints(root, input.Content, packageName)
+	symbols = append(symbols, endpointSyms...)
+
 	return &parser.ParseResult{
 		Symbols:    symbols,
 		References: refs,
@@ -698,4 +702,275 @@ func extractFirstStringLiteral(args *sitter.Node, src []byte) string {
 		}
 	}
 	return ""
+}
+
+// ---------------------------------------------------------------------------
+// Spring MVC/WebFlux endpoint extraction
+// ---------------------------------------------------------------------------
+
+// springVerbMappings maps Spring annotation names to HTTP verbs.
+// An empty verb string means the annotation carries explicit method= attribute
+// (i.e. @RequestMapping), so we use GET as the default.
+var springVerbMappings = map[string]string{
+	"GetMapping":      "GET",
+	"PostMapping":     "POST",
+	"PutMapping":      "PUT",
+	"PatchMapping":    "PATCH",
+	"DeleteMapping":   "DELETE",
+	"RequestMapping":  "", // verb comes from method= attribute or defaults to GET
+}
+
+// extractSpringEndpoints walks the tree and emits endpoint symbols for every
+// Spring controller method decorated with a mapping annotation.
+//
+// Strategy:
+//  1. Find classes annotated with @RestController, @Controller, or @RequestMapping.
+//  2. Collect the class-level base path from @RequestMapping.
+//  3. For each method in the class body, look for HTTP mapping annotations.
+//  4. Emit a Symbol with Kind "endpoint" and Signature "GET /api/orders/{id}".
+func extractSpringEndpoints(root *sitter.Node, src []byte, pkg string) []parser.Symbol {
+	var endpoints []parser.Symbol
+
+	walkTree(root, func(node *sitter.Node) {
+		if node.Type() != "class_declaration" {
+			return
+		}
+
+		// Check whether this class is a Spring controller
+		if !isSpringController(node, src) {
+			return
+		}
+
+		className := ""
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			if child.Type() == "identifier" {
+				className = child.Content(src)
+				break
+			}
+		}
+		if className == "" {
+			return
+		}
+
+		qname := qualifyJava(pkg, className)
+
+		// Collect class-level base paths from @RequestMapping in modifiers
+		var basePaths []string
+		classModifiers := findChild(node, "modifiers")
+		if classModifiers != nil {
+			for i := 0; i < int(classModifiers.ChildCount()); i++ {
+				attr := classModifiers.Child(i)
+				if attr.Type() != "marker_annotation" && attr.Type() != "annotation" {
+					continue
+				}
+				annoText := attr.Content(src)
+				if !strings.Contains(annoText, "RequestMapping") {
+					continue
+				}
+				path := extractSpringMappingPath(attr, src, annoText)
+				if path != "" {
+					basePaths = append(basePaths, path)
+				}
+			}
+		}
+		if len(basePaths) == 0 {
+			basePaths = []string{""}
+		}
+
+		// Walk class body for method declarations
+		body := findChild(node, "class_body")
+		if body == nil {
+			return
+		}
+
+		for i := 0; i < int(body.ChildCount()); i++ {
+			member := body.Child(i)
+			if member.Type() != "method_declaration" {
+				continue
+			}
+
+			methodName, _ := extractMethodDecl(member, src)
+			if methodName == "" {
+				continue
+			}
+
+			// Method-level annotations live inside a "modifiers" child
+			methodModifiers := findChild(member, "modifiers")
+			if methodModifiers == nil {
+				continue
+			}
+
+			for j := 0; j < int(methodModifiers.ChildCount()); j++ {
+				mc := methodModifiers.Child(j)
+				if mc.Type() != "marker_annotation" && mc.Type() != "annotation" {
+					continue
+				}
+				annoText := mc.Content(src)
+
+				verb, isMapping := matchSpringMapping(annoText)
+				if !isMapping {
+					continue
+				}
+
+				methodPath := extractSpringMappingPath(mc, src, annoText)
+
+				for _, basePath := range basePaths {
+					route := joinSpringRoute(verb, basePath, methodPath)
+					endpoints = append(endpoints, parser.Symbol{
+						Name:          methodName,
+						QualifiedName: qname + "." + methodName,
+						Kind:          "endpoint",
+						Language:      "java",
+						StartLine:     int(member.StartPoint().Row) + 1,
+						EndLine:       int(member.EndPoint().Row) + 1,
+						Signature:     route,
+					})
+				}
+			}
+		}
+	})
+
+	return endpoints
+}
+
+// isSpringController returns true if the class has a @RestController, @Controller,
+// or @RequestMapping annotation. In Java's tree-sitter grammar, class-level
+// annotations live inside a "modifiers" child of the class_declaration.
+func isSpringController(classNode *sitter.Node, src []byte) bool {
+	modifiers := findChild(classNode, "modifiers")
+	if modifiers == nil {
+		return false
+	}
+	for i := 0; i < int(modifiers.ChildCount()); i++ {
+		child := modifiers.Child(i)
+		if child.Type() != "marker_annotation" && child.Type() != "annotation" {
+			continue
+		}
+		text := child.Content(src)
+		if strings.Contains(text, "RestController") ||
+			strings.Contains(text, "@Controller") ||
+			strings.Contains(text, "RequestMapping") {
+			return true
+		}
+	}
+	return false
+}
+
+// matchSpringMapping returns the HTTP verb for a known Spring mapping annotation
+// and true if the annotation is a known mapping type.
+func matchSpringMapping(annoText string) (verb string, ok bool) {
+	for name, v := range springVerbMappings {
+		if strings.Contains(annoText, name) {
+			if v == "" {
+				// @RequestMapping: look for method= GET|POST etc.; default GET
+				v = extractRequestMappingVerb(annoText)
+			}
+			return v, true
+		}
+	}
+	return "", false
+}
+
+// extractRequestMappingVerb parses the method= attribute of @RequestMapping.
+// Returns "GET" if not specified.
+func extractRequestMappingVerb(annoText string) string {
+	methods := []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+	upper := strings.ToUpper(annoText)
+	for _, m := range methods {
+		if strings.Contains(upper, "METHOD."+m) || strings.Contains(upper, `"`+m+`"`) {
+			return m
+		}
+	}
+	return "GET"
+}
+
+// extractSpringMappingPath extracts the path value from a Spring mapping annotation.
+// It handles: @GetMapping("/path"), @GetMapping(value="/path"), @RequestMapping(path="/path").
+func extractSpringMappingPath(node *sitter.Node, src []byte, annoText string) string {
+	// Try to find annotation_argument_list as a direct child for structured parsing
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "annotation_argument_list" {
+			return extractSpringMappingPathFromArgList(child, src)
+		}
+	}
+	// Fallback: text-based extraction from the raw annotation string
+	return extractAnnotationStringParam(annoText)
+}
+
+// extractSpringMappingPathFromArgList extracts the first path string from an
+// annotation_argument_list node. Handles:
+//   - positional: ("/{id}")
+//   - named value: (value = "/{id}")
+//   - named path: (path = "/{id}")
+func extractSpringMappingPathFromArgList(node *sitter.Node, src []byte) string {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		switch child.Type() {
+		case "string_literal":
+			return extractJavaStringLiteralContent(child, src)
+		case "element_value_pair":
+			// Only use value= or path= named params (skip method=, etc.)
+			name := ""
+			for j := 0; j < int(child.ChildCount()); j++ {
+				gc := child.Child(j)
+				if gc.Type() == "identifier" {
+					name = gc.Content(src)
+					break
+				}
+			}
+			if name == "" || name == "value" || name == "path" {
+				for j := 0; j < int(child.ChildCount()); j++ {
+					gc := child.Child(j)
+					if gc.Type() == "string_literal" {
+						return extractJavaStringLiteralContent(gc, src)
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// extractJavaStringLiteralContent returns the unquoted content of a Java string_literal node.
+// The tree-sitter Java grammar stores the content in a string_fragment child node.
+func extractJavaStringLiteralContent(node *sitter.Node, src []byte) string {
+	// Prefer the string_fragment child if present (tree-sitter Java grammar)
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "string_fragment" {
+			return child.Content(src)
+		}
+	}
+	// Fallback: strip surrounding quotes from the raw content
+	text := node.Content(src)
+	if len(text) >= 2 {
+		return text[1 : len(text)-1]
+	}
+	return ""
+}
+
+// joinSpringRoute builds a canonical route string like "GET /api/users/{id}".
+func joinSpringRoute(verb, basePath, methodPath string) string {
+	base := "/" + strings.Trim(basePath, "/")
+	if base == "/" {
+		base = ""
+	}
+	method := ""
+	if methodPath != "" {
+		method = "/" + strings.Trim(methodPath, "/")
+	}
+	combined := base + method
+	if combined == "" {
+		combined = "/"
+	}
+	// Normalise: strip trailing slash except root
+	if len(combined) > 1 {
+		combined = strings.TrimRight(combined, "/")
+	}
+	if verb == "" {
+		return combined
+	}
+	return verb + " " + combined
 }

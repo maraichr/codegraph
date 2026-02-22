@@ -19,12 +19,16 @@ Tools:
 - relationships: FK/joins between tables. Params: {"topic":"..."}
 - lineage: Data flow for a symbol. Params: {"symbol_name":"...","direction":"both"}
 - impact: What breaks if symbol changes. Params: {"symbol_name":"...","change_type":"modify"}
+- cross_language: Trace code flow across language boundaries (e.g. C#→SQL). Params: {"symbol_name":"...","direction":"full"}
 
 Examples:
 User: "what are the most important tables?" → {"tool":"ranking","params":{"kinds":["table"],"metric":"in_degree"}}
 User: "what happens if I delete users?" → {"tool":"impact","params":{"symbol_name":"users","change_type":"delete"}}
 User: "show me everything about auth" → {"tool":"subgraph","params":{"topic":"auth"}}
 User: "how many procedures access users?" → {"tool":"search","params":{"query":"users","kinds":["procedure"]}}
+User: "what tables does this endpoint touch?" → {"tool":"cross_language","params":{"symbol_name":"endpoint","direction":"full"}}
+User: "full stack trace from C# to SQL for GetCustomer" → {"tool":"cross_language","params":{"symbol_name":"GetCustomer","direction":"full"}}
+User: "who calls this stored procedure?" → {"tool":"cross_language","params":{"symbol_name":"procedure","direction":"upstream"}}
 
 Reply ONLY valid JSON. No explanation, no markdown.`
 
@@ -85,6 +89,7 @@ func parseToolSelection(response string) (*ToolSelection, error) {
 	validTools := map[string]bool{
 		"search": true, "ranking": true, "overview": true,
 		"subgraph": true, "relationships": true, "lineage": true, "impact": true,
+		"cross_language": true,
 	}
 	if !validTools[sel.Tool] {
 		return nil, fmt.Errorf("unknown tool %q", sel.Tool)
@@ -178,6 +183,20 @@ func fallbackRoute(question string) *ToolSelection {
 	for _, p := range lineagePatterns {
 		if strings.Contains(q, p) {
 			return &ToolSelection{Tool: "lineage", Params: map[string]any{"symbol_name": extractMainSubject(question), "direction": "both"}}
+		}
+	}
+
+	crossLangPatterns := []string{
+		"stack trace", "full stack", "end to end",
+		"cross-language", "cross language",
+		"from c# to", "from java to", "from app to",
+		"calls this stored proc", "calls this procedure",
+		"what tables does", "tables does this endpoint",
+		"who calls",
+	}
+	for _, p := range crossLangPatterns {
+		if strings.Contains(q, p) {
+			return &ToolSelection{Tool: "cross_language", Params: map[string]any{"symbol_name": extractMainSubject(question), "direction": "full"}}
 		}
 	}
 

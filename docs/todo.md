@@ -17,8 +17,18 @@
 
 - [x] **Indexes for sync** — Ensure uniqueness constraints on `Symbol(id)` and `File(id)` at startup so MERGE/MATCH by id are indexed; without them, sync can take 10+ minutes instead of ~30s. See `graph.EnsureIndexes()` and `internal/graph/queries.go` (CreateConstraintSymbolID, CreateConstraintFileID).
 
+## Cross-Language API Connections
+
+- [x] **JS/TS parser: HTTP call extraction** — `extractAPICallRefs` detects `fetch`, `axios.get/post/put/patch/delete`, `http.get`, template literals, and binary-expression concatenation. Emits `calls_api` references with normalized paths (`{*}` for dynamic segments).
+- [x] **C# parser: ASP.NET Core endpoint symbols** — `extractASPNetEndpoints` detects `[Route]`, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]`, `[HttpDelete]` etc. on controller classes. Emits `Kind: "endpoint"` symbols with `Signature: "VERB /path/{id}"`. Route parameters with type constraints (`{id:int}`) are normalized to `{id}`.
+- [x] **Java parser: Spring MVC endpoint symbols** — `extractSpringEndpoints` detects `@RestController`/`@Controller` + `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping`, `@DeleteMapping`, `@RequestMapping`. Combines class-level `@RequestMapping` base paths with method-level paths. Emits `Kind: "endpoint"` symbols with `Signature: "VERB /path/{id}"`.
+- [x] **CrossLangResolver: `api_route_match` strategy** — Added `EndpointsBySignature()` to `SymbolLookup` interface. Normalized route comparison via `normalizeRouteForMatch` (lowercases, replaces `{param}`, `{*}`, `:param` → `{p}`). Bridge rules added for `javascript/typescript → csharp/java`. Production populates signatures via `ListEndpointSymbolsByProject`.
+
 ## Possible follow-ups
 
 - Prefer canonical (non-migration) symbols when resolving FQNs in lineage (symbol metadata `is_migration`).
 - Add `confidence` filtering in lineage queries (e.g. Neo4j filter edges below 0.7).
 - PgSQL parser: support `SkipColumnLineage` for migration-classified files.
+- Cross-language API: extend to other HTTP client libraries (ky, superagent, Angular HttpClient).
+- Cross-language API: extract WebSocket and gRPC service connections as a follow-on.
+- Cross-language API: surface `calls_api` edges in the Neo4j graph for subgraph traversal and lineage.

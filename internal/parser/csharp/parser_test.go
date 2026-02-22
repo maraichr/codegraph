@@ -670,3 +670,106 @@ func refsToNames(refs []parser.RawReference) []string {
 	}
 	return names
 }
+
+// ---------------------------------------------------------------------------
+// ASP.NET Core endpoint extraction tests
+// ---------------------------------------------------------------------------
+
+func TestCSharpEndpointExtractionBasicRoute(t *testing.T) {
+	src := `
+using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Controllers {
+    [ApiController]
+    [Route("api/[controller]")]
+    public class OrdersController : ControllerBase {
+        [HttpGet]
+        public IActionResult GetAll() => Ok();
+
+        [HttpGet("{id}")]
+        public IActionResult GetById(int id) => Ok();
+
+        [HttpPost]
+        public IActionResult Create([FromBody] object body) => Ok();
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "OrdersController.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpointMap := make(map[string]parser.Symbol)
+	for _, s := range result.Symbols {
+		if s.Kind == "endpoint" {
+			endpointMap[s.Signature] = s
+		}
+	}
+
+	if len(endpointMap) == 0 {
+		t.Fatal("expected endpoint symbols, got none")
+	}
+
+	wantRoutes := []string{
+		"GET /api/orders",
+		"GET /api/orders/{id}",
+		"POST /api/orders",
+	}
+	for _, want := range wantRoutes {
+		if _, ok := endpointMap[want]; !ok {
+			t.Errorf("missing endpoint %q; have: %v", want, endpointMapKeys(endpointMap))
+		}
+	}
+}
+
+func TestCSharpEndpointExtractionVerbAttribute(t *testing.T) {
+	src := `
+using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Controllers {
+    [Route("api/products")]
+    public class ProductsController : ControllerBase {
+        [HttpGet("{id:int}")]
+        public IActionResult Get(int id) => Ok();
+
+        [HttpPut("{id:int}")]
+        public IActionResult Update(int id) => Ok();
+
+        [HttpDelete("{id:int}")]
+        public IActionResult Delete(int id) => Ok();
+    }
+}
+`
+	p := New()
+	result, err := p.Parse(parser.FileInput{Path: "ProductsController.cs", Content: []byte(src)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpointMap := make(map[string]parser.Symbol)
+	for _, s := range result.Symbols {
+		if s.Kind == "endpoint" {
+			endpointMap[s.Signature] = s
+		}
+	}
+
+	wantRoutes := []string{
+		"GET /api/products/{id}",
+		"PUT /api/products/{id}",
+		"DELETE /api/products/{id}",
+	}
+	for _, want := range wantRoutes {
+		if _, ok := endpointMap[want]; !ok {
+			t.Errorf("missing endpoint %q; have: %v", want, endpointMapKeys(endpointMap))
+		}
+	}
+}
+
+func endpointMapKeys(m map[string]parser.Symbol) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
